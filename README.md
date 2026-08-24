@@ -395,17 +395,12 @@ After a 50-record batch simulation, the engine typically achieves:
 
 ## 👨‍💻 Author
 
-**Rahul** — Full Stack Systems & Fintech Engineer
+**Rahul Hongekar** — a AIML Engineer
 
 Built as part of the **Razorpay Hackathon — Track 03: AI Revenue Recovery**.
 
 ---
 
-## 📄 License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
----
 
 <p align="center">
   <strong>Built with ❤️ for Razorpay</strong><br/>
