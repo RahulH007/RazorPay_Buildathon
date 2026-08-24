@@ -1,0 +1,221 @@
+"""
+RecoverOS Recovery Routes
+GET /api/recovery/{payment_id} — Full record with audit trail
+POST /api/recovery/{payment_id}/opt-out — Process customer opt-out
+POST /api/recovery/{payment_id}/settle — Simulate settlement (for phone simulator)
+POST /api/recovery/{payment_id}/dtmf — Handle voice DTMF response
+GET /api/voice/{payment_id} — Get voice script
+"""
+
+from fastapi import APIRouter, HTTPException
+
+from app.database import SessionLocal
+from app.models import PaymentFailureRecord, AuditTrailEntry
+from app.state_machine import transition_state, log_audit
+from app.schemas import PaymentFailureResponse
+from app.voice_pipeline import handle_dtmf_response
+from app.llm_agent import generate_hinglish_script
+
+router = APIRouter()
+
+
+@router.get("/recovery/{payment_id}")
+async def get_recovery_record(payment_id: str):
+    """Get full recovery record with audit trail."""
+    db = SessionLocal()
+    try:
+        record = db.query(PaymentFailureRecord).filter(
+            PaymentFailureRecord.payment_id == payment_id
+        ).first()
+
+        if not record:
+            raise HTTPException(status_code=404, detail=f"Record not found: {payment_id}")
+
+        # Get audit trail
+        audit_entries = db.query(AuditTrailEntry).filter(
+            AuditTrailEntry.payment_id == payment_id
+        ).order_by(AuditTrailEntry.timestamp).all()
+
+        return {
+            "payment_id": record.payment_id,
+            "amount": record.amount,
+            "currency": record.currency,
+            "method": record.method,
+            "subscription_id": record.subscription_id,
+            "invoice_id": record.invoice_id,
+            "merchant_id": record.merchant_id,
+            "customer_name": record.customer_name,
+            "customer_email": record.customer_email,
+            "customer_phone": record.customer_phone,
+            "error_source": record.error_source,
+            "error_step": record.error_step,
+            "error_reason": record.error_reason,
+            "error_description": record.error_description,
+            "failure_class": record.failure_class,
+            "recovery_state": record.recovery_state,
+            "recovery_channel": record.recovery_channel,
+            "batch_id": record.batch_id,
+            "created_at": record.created_at.isoformat() if record.created_at else None,
+            "updated_at": record.updated_at.isoformat() if record.updated_at else None,
+            "audit_trail": [
+                {
+                    "id": e.id,
+                    "timestamp": e.timestamp.isoformat() if e.timestamp else None,
+                    "action": e.action,
+                    "actor": e.actor,
+                    "details": e.details,
+                    "cost_incurred_inr": e.cost_incurred_inr,
+                    "llm_model": e.llm_model,
+                    "llm_input_tokens": e.llm_input_tokens,
+                    "llm_output_tokens": e.llm_output_tokens,
+                    "llm_latency_ms": e.llm_latency_ms,
+                    "llm_confidence": e.llm_confidence,
+                }
+                for e in audit_entries
+            ],
+        }
+    finally:
+        db.close()
+
+
+@router.post("/recovery/{payment_id}/opt-out")
+async def opt_out_record(payment_id: str):
+    """Process customer opt-out — immediately halt all recovery actions."""
+    db = SessionLocal()
+    try:
+        record = db.query(PaymentFailureRecord).filter(
+            PaymentFailureRecord.payment_id == payment_id
+        ).first()
+
+        if not record:
+            raise HTTPException(status_code=404, detail=f"Record not found: {payment_id}")
+
+        if record.recovery_state in ("RECOVERED", "FAILED_STOPPED"):
+            return {
+                "status": "already_terminal",
+                "payment_id": payment_id,
+                "recovery_state": record.recovery_state,
+                "message": "Record is already in a terminal state",
+            }
+
+        # Log opt-out
+        log_audit(
+            db, record,
+            action="CUSTOMER_OPT_OUT",
+            actor="customer",
+            details="Customer opted out of recovery communications",
+        )
+
+        # Transition to FAILED_STOPPED
+        await transition_state(
+            db, record,
+            to_state="FAILED_STOPPED",
+            actor="customer",
+            details="OPT_OUT: Customer requested to stop all recovery actions",
+        )
+
+        return {
+            "status": "opted_out",
+            "payment_id": payment_id,
+            "recovery_state": "FAILED_STOPPED",
+            "message": "All recovery actions halted per customer request",
+        }
+    finally:
+        db.close()
+
+
+@router.post("/recovery/{payment_id}/settle")
+async def simulate_settlement(payment_id: str):
+    """
+    Simulate a payment settlement (for the phone simulator UPI Pay flow).
+    Transitions record to RECOVERED.
+    """
+    db = SessionLocal()
+    try:
+        record = db.query(PaymentFailureRecord).filter(
+            PaymentFailureRecord.payment_id == payment_id
+        ).first()
+
+        if not record:
+            raise HTTPException(status_code=404, detail=f"Record not found: {payment_id}")
+
+        if record.recovery_state == "RECOVERED":
+            return {"status": "already_recovered", "payment_id": payment_id}
+
+        if record.recovery_state in ("INTERVENING", "DIAGNOSED", "INGESTED"):
+            # Ensure proper state for transition
+            if record.recovery_state == "INGESTED":
+                record.recovery_state = "DIAGNOSED"
+                db.commit()
+            if record.recovery_state == "DIAGNOSED":
+                await transition_state(
+                    db, record,
+                    to_state="INTERVENING",
+                    actor="system",
+                    details="Phone simulator initiated payment flow",
+                )
+
+            await transition_state(
+                db, record,
+                to_state="RECOVERED",
+                actor="system",
+                details=f"Payment settled via phone simulator. Amount: ₹{record.amount / 100:,.2f}",
+            )
+
+            return {
+                "status": "recovered",
+                "payment_id": payment_id,
+                "amount": record.amount,
+                "message": "Payment successfully settled",
+            }
+
+        return {
+            "status": "invalid_state",
+            "payment_id": payment_id,
+            "recovery_state": record.recovery_state,
+        }
+    finally:
+        db.close()
+
+
+@router.post("/recovery/{payment_id}/dtmf")
+async def handle_dtmf(payment_id: str, key: str = "1"):
+    """Handle DTMF response from voice call simulator."""
+    db = SessionLocal()
+    try:
+        record = db.query(PaymentFailureRecord).filter(
+            PaymentFailureRecord.payment_id == payment_id
+        ).first()
+
+        if not record:
+            raise HTTPException(status_code=404, detail=f"Record not found: {payment_id}")
+
+        result = await handle_dtmf_response(db, record, key)
+        return result
+    finally:
+        db.close()
+
+
+@router.get("/voice/{payment_id}")
+async def get_voice_script(payment_id: str):
+    """Get the Hinglish voice script for a payment record."""
+    db = SessionLocal()
+    try:
+        record = db.query(PaymentFailureRecord).filter(
+            PaymentFailureRecord.payment_id == payment_id
+        ).first()
+
+        if not record:
+            raise HTTPException(status_code=404, detail=f"Record not found: {payment_id}")
+
+        script = await generate_hinglish_script(record)
+
+        return {
+            "payment_id": payment_id,
+            "script": script,
+            "customer_name": record.customer_name,
+            "amount": record.amount,
+            "language": "hi-IN (Hinglish)",
+        }
+    finally:
+        db.close()

@@ -1,0 +1,126 @@
+@import "tailwindcss";
+
+/* ============================================================
+   RecoverOS — Razorpay Blade Design System Tokens & Foundations
+   Specification: Razorpay_UI_SILL.md
+   ============================================================ */
+
+@layer base {
+  :root {
+    /* Razorpay Blade Color Tokens */
+    --color-navy-darkest: #02042B;
+    --color-navy-surface: #071026;
+    --color-navy-elevated: #0C1E3A;
+    --color-rzp-blue: #0B72E7;
+    --color-blue-bright: #2B84EA;
+    --color-electric-cyan: #38BDF8;
+    --color-neon-teal: #00D2D3;
+    --color-emerald-success: #10B981;
+    --color-amber-warning: #F59E0B;
+    --color-rose-danger: #EF4444;
+
+    /* Typography scale */
+    --font-sans: "Inter", "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  }
+
+  html {
+    background-color: #02042B;
+    color: #cbd5e1;
+    font-family: var(--font-sans);
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background-color: #02042B;
+  }
+}
+
+/* ============================================================
+   Custom Scrollbar
+   ============================================================ */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(2, 4, 43, 0.4);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(11, 114, 231, 0.4);
+}
+
+/* Global scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #02042B;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.3);
+}
+
+/* ============================================================
+   Animations & Transitions
+   ============================================================ */
+@keyframes move-flash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.6);
+    transform: scale(0.98);
+  }
+  40% {
+    box-shadow: 0 0 20px 4px rgba(56, 189, 248, 0.3);
+    transform: scale(1.02);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0);
+    transform: scale(1);
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-move-flash {
+  animation: move-flash 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-modal-in {
+  animation: modal-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-overlay-in {
+  animation: overlay-in 0.2s ease-out forwards;
+}

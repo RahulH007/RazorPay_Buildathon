@@ -1,0 +1,356 @@
+/* ============================================================
+   RecoverOS — Device Mockup Screens
+   The app shell is styled with Tailwind utilities (index.css).
+   Only the skeuomorphic phone screens live here.
+   ============================================================ */
+
+/* Thin scrollbar inside kanban columns */
+.kanban-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.kanban-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+}
+
+/* ================= WHATSAPP SCREEN ================= */
+.wa-pattern {
+  background-color: #0b141a;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23111b21' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.whatsapp-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #0b141a;
+}
+
+.whatsapp-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #1f2c34;
+}
+
+.whatsapp-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.whatsapp-contact-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #e9edef;
+}
+
+.whatsapp-contact-status {
+  font-size: 12px;
+  color: #8696a0;
+}
+
+.whatsapp-messages {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.whatsapp-bubble {
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 8px;
+  position: relative;
+  animation: bubble-in 0.3s ease-out;
+}
+
+.whatsapp-bubble.incoming {
+  background: #202c33;
+  color: #e9edef;
+  margin-right: auto;
+  border-bottom-left-radius: 3px;
+}
+
+.whatsapp-bubble.outgoing {
+  background: #005c4b;
+  color: #e9edef;
+  margin-left: auto;
+  border-bottom-right-radius: 3px;
+}
+
+.whatsapp-bubble-time {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.45);
+  text-align: right;
+  margin-top: 4px;
+}
+
+.whatsapp-pay-btn {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  background: #0b72e7;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-out;
+  font-family: inherit;
+}
+
+.whatsapp-pay-btn:hover {
+  background: #2e8bff;
+  transform: translateY(-1px);
+}
+
+/* ================= VOICE CALL SCREEN ================= */
+.voice-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background:
+    radial-gradient(24rem 14rem at 50% -20%, rgba(11, 114, 231, 0.18), transparent 65%),
+    linear-gradient(180deg, #071026 0%, #02042b 100%);
+  padding: 24px;
+  text-align: center;
+}
+
+.voice-caller-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0b72e7, #38bdf8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin-bottom: 16px;
+  box-shadow: 0 0 44px rgba(56, 189, 248, 0.35);
+}
+
+.voice-caller-name {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #f8fafc;
+  margin-bottom: 4px;
+}
+
+.voice-caller-subtitle {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-bottom: 28px;
+}
+
+.voice-call-status {
+  max-width: 240px;
+  max-height: 88px;
+  overflow-y: auto;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #7dd3fc;
+  margin-bottom: 20px;
+  animation: blink-dot 2s ease-in-out infinite;
+}
+
+.voice-actions {
+  display: flex;
+  gap: 32px;
+  margin-bottom: 16px;
+}
+
+.voice-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  transition: all 0.2s ease-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.voice-btn.accept {
+  background: linear-gradient(135deg, #0b72e7, #38bdf8);
+  color: #fff;
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.4);
+}
+.voice-btn.accept:hover {
+  transform: scale(1.08);
+}
+
+.voice-btn.decline {
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #fb7185;
+}
+.voice-btn.decline:hover {
+  transform: scale(1.08);
+}
+
+.dtmf-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.dtmf-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+  font-size: 17px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  transition: all 0.15s ease-out;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.dtmf-btn:hover {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.4);
+  transform: scale(1.05);
+}
+
+.dtmf-btn:active {
+  transform: scale(0.95);
+}
+
+.dtmf-label {
+  font-size: 7.5px;
+  font-weight: 400;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+
+/* ================= UPI CHECKOUT SCREEN ================= */
+.upi-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fff;
+  color: #334155;
+}
+
+.upi-header {
+  padding: 16px;
+  background: linear-gradient(135deg, #0b72e7, #075bb8);
+  color: #fff;
+  text-align: center;
+  box-shadow: 0 4px 18px rgba(11, 114, 231, 0.35);
+}
+
+.upi-header h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.upi-body {
+  flex: 1;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.upi-amount {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+  margin: 20px 0 8px;
+}
+
+.upi-merchant {
+  font-size: 14px;
+  color: #64748b;
+  margin-bottom: 28px;
+}
+
+.upi-pay-btn {
+  width: 100%;
+  padding: 15px;
+  background: #0b72e7;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-out;
+  box-shadow: 0 8px 22px rgba(11, 114, 231, 0.35);
+  font-family: inherit;
+}
+
+.upi-pay-btn:hover:not(:disabled) {
+  background: #2e8bff;
+  transform: translateY(-1px);
+}
+
+.upi-pay-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.upi-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: #fff;
+  animation: modal-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.upi-success-check {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #34d399);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  color: #fff;
+  margin-bottom: 16px;
+  box-shadow: 0 12px 32px rgba(16, 185, 129, 0.4);
+  animation: check-bounce 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.upi-success h3 {
+  color: #059669;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.upi-success p {
+  color: #64748b;
+  font-size: 14px;
+}
