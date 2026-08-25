@@ -1,7 +1,78 @@
+# ---------------------------------------------------------------
+# Environments
+# ---------------------------------------------------------------
+venv/
+.venv/
+env/
+ENV/
+
+# ---------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+dist/
+
+# ---------------------------------------------------------------
+# Node / frontend
+# ---------------------------------------------------------------
+node_modules/
+frontend/dist/
+frontend/dist-ssr/
+*.local
+
+# ---------------------------------------------------------------
+# Secrets
+# ---------------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# ---------------------------------------------------------------
+# Generated databases
+# recoveros_demo.db is rebuilt from scratch on every `run_demo`;
+# recoveros.db is created on first API start. Neither belongs in git.
+# The -wal and -shm siblings appear because SQLite runs in WAL mode.
+# ---------------------------------------------------------------
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# ---------------------------------------------------------------
+# Editors / OS
+# ---------------------------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# ---------------------------------------------------------------
+# Large media
+# ---------------------------------------------------------------
+*.mp4
+*.mov
+*.avi
+
+# ---------------------------------------------------------------
+# Working notes, not part of the deliverable
+# ---------------------------------------------------------------
 demo_script.md
-implementation.md
-Razorpay_UI_SILL.md
-Recordin 2026-08-23 225201.mp4
+implementation_plan.md
 recoveros_blueprint.md
+Razorpay_UI_SILL.md
 SKILL.md
 task.md
+Final_Plan.md
