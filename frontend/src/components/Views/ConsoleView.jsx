@@ -36,49 +36,49 @@ export default function ConsoleView({ records = [], isConnected = false, onRunBa
       {/* Console Header Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex items-center justify-between text-[#64748B] text-xs font-mono">
+          <div className="flex items-center justify-between text-[var(--rzp-ink-muted)] text-xs font-mono">
             <span>DIAGNOSTIC LATENCY</span>
-            <Zap size={14} className="text-[#2563EB]" />
+            <Zap size={14} className="text-[var(--rzp-blue-600)]" />
           </div>
-          <div className="mt-2 text-xl font-bold font-mono text-[#1B1F36]">{metrics.avgLatency}</div>
+          <div className="mt-2 text-xl font-bold font-mono text-[var(--rzp-ink)]">{metrics.avgLatency}</div>
           <div className="text-[10px] text-emerald-600 mt-1">p99 &lt; 18ms</div>
         </div>
 
         <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex items-center justify-between text-[#64748B] text-xs font-mono">
+          <div className="flex items-center justify-between text-[var(--rzp-ink-muted)] text-xs font-mono">
             <span>INGESTION RATE</span>
-            <Activity size={14} className="text-[#2563EB]" />
+            <Activity size={14} className="text-[var(--rzp-blue-600)]" />
           </div>
-          <div className="mt-2 text-xl font-bold font-mono text-[#1B1F36]">{metrics.throughput}</div>
-          <div className="text-[10px] text-[#64748B] mt-1">Razorpay webhook sync</div>
+          <div className="mt-2 text-xl font-bold font-mono text-[var(--rzp-ink)]">{metrics.throughput}</div>
+          <div className="text-[10px] text-[var(--rzp-ink-muted)] mt-1">Razorpay webhook sync</div>
         </div>
 
         <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex items-center justify-between text-[#64748B] text-xs font-mono">
+          <div className="flex items-center justify-between text-[var(--rzp-ink-muted)] text-xs font-mono">
             <span>ENGINE STATUS</span>
             <Server size={14} className={isConnected ? "text-emerald-600" : "text-rose-500"} />
           </div>
           <div className={`mt-2 text-xl font-bold font-mono ${isConnected ? 'text-emerald-600' : 'text-rose-500'}`}>
             {isConnected ? 'LIVE (ONLINE)' : 'OFFLINE'}
           </div>
-          <div className="text-[10px] text-[#64748B] mt-1">FastAPI + Asyncio Loop</div>
+          <div className="text-[10px] text-[var(--rzp-ink-muted)] mt-1">FastAPI + Asyncio Loop</div>
         </div>
 
         <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex items-center justify-between text-[#64748B] text-xs font-mono">
+          <div className="flex items-center justify-between text-[var(--rzp-ink-muted)] text-xs font-mono">
             <span>ACTIVE WORKERS</span>
             <Cpu size={14} className="text-violet-600" />
           </div>
-          <div className="mt-2 text-xl font-bold font-mono text-[#1B1F36]">{metrics.activeWorkers} Cores</div>
-          <div className="text-[10px] text-[#2563EB] mt-1">Bounded Concurrency</div>
+          <div className="mt-2 text-xl font-bold font-mono text-[var(--rzp-ink)]">{metrics.activeWorkers} Cores</div>
+          <div className="text-[10px] text-[var(--rzp-blue-600)] mt-1">Bounded Concurrency</div>
         </div>
 
         <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex items-center justify-between text-[#64748B] text-xs font-mono">
+          <div className="flex items-center justify-between text-[var(--rzp-ink-muted)] text-xs font-mono">
             <span>SYSTEM UPTIME</span>
             <CheckCircle size={14} className="text-emerald-600" />
           </div>
-          <div className="mt-2 text-xl font-bold font-mono text-[#1B1F36]">{metrics.uptime}</div>
+          <div className="mt-2 text-xl font-bold font-mono text-[var(--rzp-ink)]">{metrics.uptime}</div>
           <div className="text-[10px] text-emerald-600 mt-1">Zero dropped webhooks</div>
         </div>
       </div>
@@ -87,9 +87,9 @@ export default function ConsoleView({ records = [], isConnected = false, onRunBa
       <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
         <div className="flex flex-wrap items-center justify-between px-6 py-4 border-b border-slate-200 bg-[#F8FAFC]">
           <div className="flex items-center gap-2">
-            <Terminal size={18} className="text-[#2563EB]" />
-            <h2 className="text-sm font-semibold text-[#1B1F36] font-mono">RazorpayRecoveryEngine Telemetry Stream</h2>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-blue-50 border border-blue-200 text-[#2563EB]">
+            <Terminal size={18} className="text-[var(--rzp-blue-600)]" />
+            <h2 className="text-sm font-semibold text-[var(--rzp-ink)] font-mono">RazorpayRecoveryEngine Telemetry Stream</h2>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-blue-50 border border-blue-200 text-[var(--rzp-blue-600)]">
               real-time
             </span>
           </div>
@@ -98,7 +98,7 @@ export default function ConsoleView({ records = [], isConnected = false, onRunBa
             <button
               onClick={onRunBatch}
               disabled={isRunning}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-semibold shadow-md shadow-blue-500/20 transition-all disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--rzp-blue-600)] hover:bg-[var(--rzp-blue-700)] text-white text-xs font-semibold shadow-md shadow-blue-500/20 transition-all disabled:opacity-50 cursor-pointer"
             >
               {isRunning ? (
                 <>

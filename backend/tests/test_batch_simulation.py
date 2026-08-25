@@ -23,10 +23,11 @@ async def test_batch_simulation_processes_all_dataset_records(db_session, monkey
     ).all()
 
     assert result["status"] == "COMPLETED"
-    assert result["total_records"] == 50
-    assert result["processed_records"] == 50
+    expected = len(simulator.load_dataset())
+    assert result["total_records"] == expected
+    assert result["processed_records"] == expected
     assert batch.status == "COMPLETED"
-    assert len(records) == 50
+    assert len(records) == expected
     assert all(record.recovery_state != "INGESTED" for record in records)
     assert sum(record.recovery_state == "RECOVERED" for record in records) == result["recovered_count"]
     assert result["total_gmv"] > result["recovered_gmv"] > 0

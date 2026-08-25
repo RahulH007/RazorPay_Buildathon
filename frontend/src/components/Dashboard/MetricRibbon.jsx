@@ -10,7 +10,7 @@ import { formatCurrency, formatCurrencyFull, formatPercent, formatINR } from '..
 import { useCountUp } from '../../hooks/useCountUp';
 
 const TINTS = {
-  blue: 'bg-blue-50 text-[#2563EB] border-blue-200',
+  blue: 'bg-blue-50 text-[var(--rzp-blue-600)] border-blue-200',
   emerald: 'bg-emerald-50 text-emerald-600 border-emerald-200',
   cyan: 'bg-cyan-50 text-cyan-600 border-cyan-200',
   violet: 'bg-violet-50 text-violet-600 border-violet-200',
@@ -36,7 +36,7 @@ function StatCard({ icon: Icon, tint, label, rawValue, format, sub }) {
         </span>
       </div>
 
-      <div className="mt-3 font-mono text-2xl font-extrabold tracking-tight text-[#1B1F36] group-hover:text-[#2563EB] transition-colors">
+      <div className="mt-3 font-mono text-2xl font-extrabold tracking-tight text-[var(--rzp-ink)] group-hover:text-[var(--rzp-blue-600)] transition-colors">
         {format(animated)}
       </div>
 

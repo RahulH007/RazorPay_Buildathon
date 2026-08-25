@@ -9,6 +9,8 @@ GET /api/voice/{payment_id} — Get voice script
 
 from fastapi import APIRouter, HTTPException
 
+from app import ledger
+from app.consent import record_opt_out
 from app.database import SessionLocal
 from app.models import PaymentFailureRecord, AuditTrailEntry
 from app.state_machine import transition_state, log_audit
@@ -31,10 +33,10 @@ async def get_recovery_record(payment_id: str):
         if not record:
             raise HTTPException(status_code=404, detail=f"Record not found: {payment_id}")
 
-        # Get audit trail
+        # Ordered by chain position, which is also chronological order
         audit_entries = db.query(AuditTrailEntry).filter(
             AuditTrailEntry.payment_id == payment_id
-        ).order_by(AuditTrailEntry.timestamp).all()
+        ).order_by(AuditTrailEntry.sequence_no).all()
 
         return {
             "payment_id": record.payment_id,
@@ -60,11 +62,14 @@ async def get_recovery_record(payment_id: str):
             "audit_trail": [
                 {
                     "id": e.id,
-                    "timestamp": e.timestamp.isoformat() if e.timestamp else None,
+                    "sequence_no": e.sequence_no,
+                    "entry_hash": e.entry_hash,
+                    "timestamp": ledger.us_to_iso(e.timestamp_us),
                     "action": e.action,
                     "actor": e.actor,
                     "details": e.details,
-                    "cost_incurred_inr": e.cost_incurred_inr,
+                    "cost_paise": e.cost_paise,
+                    "cost_inr": (e.cost_paise or 0) / 100.0,
                     "llm_model": e.llm_model,
                     "llm_input_tokens": e.llm_input_tokens,
                     "llm_output_tokens": e.llm_output_tokens,
@@ -98,12 +103,20 @@ async def opt_out_record(payment_id: str):
                 "message": "Record is already in a terminal state",
             }
 
-        # Log opt-out
+        # Registry first — this is what suppresses the contact's other payments
+        record_opt_out(
+            db,
+            phone=record.customer_phone,
+            source="api",
+            payment_id=record.payment_id,
+            channel="all",
+            batch_id=record.batch_id,
+        )
         log_audit(
             db, record,
             action="CUSTOMER_OPT_OUT",
             actor="customer",
-            details="Customer opted out of recovery communications",
+            details="Customer opted out of recovery communications (all channels)",
         )
 
         # Transition to FAILED_STOPPED
@@ -119,6 +132,7 @@ async def opt_out_record(payment_id: str):
             "payment_id": payment_id,
             "recovery_state": "FAILED_STOPPED",
             "message": "All recovery actions halted per customer request",
+            "scope": "Suppression applies to every future payment from this contact",
         }
     finally:
         db.close()

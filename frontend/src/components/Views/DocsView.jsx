@@ -87,14 +87,14 @@ async def razorpay_webhook(request: Request):
       {/* Docs Header */}
       <div className="p-8 rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-[#F4F9FF] to-[#E8F3FF] relative overflow-hidden shadow-sm">
         <div className="relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-blue-200 bg-blue-50 text-xs font-mono text-[#2563EB] mb-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-blue-200 bg-blue-50 text-xs font-mono text-[var(--rzp-blue-600)] mb-4">
             <BookOpen size={13} />
             RazorpayRecoveryEngine Specification
           </div>
-          <h1 className="text-3xl font-extrabold text-[#1B1F36] tracking-tight">
+          <h1 className="text-3xl font-extrabold text-[var(--rzp-ink)] tracking-tight">
             Autonomous Revenue Recovery Engine for Razorpay
           </h1>
-          <p className="mt-3 max-w-3xl text-[#64748B] text-sm leading-relaxed">
+          <p className="mt-3 max-w-3xl text-[var(--rzp-ink-muted)] text-sm leading-relaxed">
             RazorpayRecoveryEngine intercepts failed payment webhooks, diagnoses root causes in &lt;18ms with an ensemble AI classifier, and orchestrates multi-rail recovery (WhatsApp 1-click UPI, Hinglish interactive voice, and mandate re-sequencing) with complete cryptographic audit logging.
           </p>
         </div>
@@ -113,8 +113,8 @@ async def razorpay_webhook(request: Request):
             onClick={() => setActiveTab(key)}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === key
-                ? 'bg-[#2563EB] text-white shadow-sm'
-                : 'text-[#64748B] hover:text-[#1B1F36] hover:bg-slate-100'
+                ? 'bg-[var(--rzp-blue-600)] text-white shadow-sm'
+                : 'text-[var(--rzp-ink-muted)] hover:text-[var(--rzp-ink)] hover:bg-slate-100'
             }`}
           >
             <Icon size={14} />
@@ -127,11 +127,11 @@ async def razorpay_webhook(request: Request):
       {activeTab === 'architecture' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="p-6 rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-[#2563EB] font-bold mb-4 font-mono">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-[var(--rzp-blue-600)] font-bold mb-4 font-mono">
               01
             </div>
-            <h3 className="text-base font-bold text-[#1B1F36] mb-2">Ingestion &amp; Verification</h3>
-            <p className="text-xs text-[#64748B] leading-relaxed">
+            <h3 className="text-base font-bold text-[var(--rzp-ink)] mb-2">Ingestion &amp; Verification</h3>
+            <p className="text-xs text-[var(--rzp-ink-muted)] leading-relaxed">
               Razorpay HMAC SHA256 signature verification validates authenticity. Ingests failure codes including BAD_REQUEST_ERROR, GATEWAY_ERROR, and INSUFFICIENT_FUNDS.
             </p>
           </div>
@@ -140,8 +140,8 @@ async def razorpay_webhook(request: Request):
             <div className="w-10 h-10 rounded-xl bg-cyan-50 border border-cyan-200 flex items-center justify-center text-cyan-600 font-bold mb-4 font-mono">
               02
             </div>
-            <h3 className="text-base font-bold text-[#1B1F36] mb-2">AI Diagnostics Engine</h3>
-            <p className="text-xs text-[#64748B] leading-relaxed">
+            <h3 className="text-base font-bold text-[var(--rzp-ink)] mb-2">AI Diagnostics Engine</h3>
+            <p className="text-xs text-[var(--rzp-ink-muted)] leading-relaxed">
               Ensemble classifier categorizes errors into 5 failure classes: Transient Technical, Auth Friction, Mandate Balance, B2B Receivable, and Hard Decline in &lt;18ms.
             </p>
           </div>
@@ -150,8 +150,8 @@ async def razorpay_webhook(request: Request):
             <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 font-bold mb-4 font-mono">
               03
             </div>
-            <h3 className="text-base font-bold text-[#1B1F36] mb-2">Multi-Rail Recovery</h3>
-            <p className="text-xs text-[#64748B] leading-relaxed">
+            <h3 className="text-base font-bold text-[var(--rzp-ink)] mb-2">Multi-Rail Recovery</h3>
+            <p className="text-xs text-[var(--rzp-ink-muted)] leading-relaxed">
               Dynamic fallback triggers localized WhatsApp payment links with 1-click UPI intent, Hinglish IVR with speech recognition &amp; DTMF support, or automated bank retries.
             </p>
           </div>
@@ -162,11 +162,11 @@ async def razorpay_webhook(request: Request):
       {activeTab === 'matrix' && (
         <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
           <div className="px-6 py-4 border-b border-slate-200 bg-[#F8FAFC]">
-            <h3 className="text-sm font-bold text-[#1B1F36] font-mono">Ensemble Decision &amp; Fallback Matrix</h3>
+            <h3 className="text-sm font-bold text-[var(--rzp-ink)] font-mono">Ensemble Decision &amp; Fallback Matrix</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-[#F8FAFC] border-b border-slate-200 text-[#64748B]">
+              <thead className="bg-[#F8FAFC] border-b border-slate-200 text-[var(--rzp-ink-muted)]">
                 <tr>
                   <th className="px-6 py-3">Failure Classification</th>
                   <th className="px-6 py-3">Typical Razorpay Reason</th>
@@ -174,35 +174,35 @@ async def razorpay_webhook(request: Request):
                   <th className="px-6 py-3">Success Rate</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-[#334155]">
+              <tbody className="divide-y divide-slate-100 text-[var(--rzp-ink)]">
                 <tr className="hover:bg-blue-50/50">
-                  <td className="px-6 py-3 text-[#2563EB] font-semibold">TRANSIENT_TECHNICAL</td>
-                  <td className="px-6 py-3 text-[#64748B]">Bank gateway timeout, NPCI throttle</td>
+                  <td className="px-6 py-3 text-[var(--rzp-blue-600)] font-semibold">TRANSIENT_TECHNICAL</td>
+                  <td className="px-6 py-3 text-[var(--rzp-ink-muted)]">Bank gateway timeout, NPCI throttle</td>
                   <td className="px-6 py-3">Silent exponential retry with jitter</td>
                   <td className="px-6 py-3 text-emerald-600 font-bold">~78.4%</td>
                 </tr>
                 <tr className="hover:bg-blue-50/50">
                   <td className="px-6 py-3 text-amber-600 font-semibold">AUTH_FRICTION</td>
-                  <td className="px-6 py-3 text-[#64748B]">OTP timeout, 3DS modal abandon</td>
+                  <td className="px-6 py-3 text-[var(--rzp-ink-muted)]">OTP timeout, 3DS modal abandon</td>
                   <td className="px-6 py-3">WhatsApp 1-Click UPI Intent Link</td>
                   <td className="px-6 py-3 text-emerald-600 font-bold">~64.2%</td>
                 </tr>
                 <tr className="hover:bg-blue-50/50">
                   <td className="px-6 py-3 text-violet-600 font-semibold">MANDATE_BALANCE</td>
-                  <td className="px-6 py-3 text-[#64748B]">Low account balance, SI throttle</td>
+                  <td className="px-6 py-3 text-[var(--rzp-ink-muted)]">Low account balance, SI throttle</td>
                   <td className="px-6 py-3">Hinglish Voice IVR + UPI Resequence</td>
                   <td className="px-6 py-3 text-emerald-600 font-bold">~52.9%</td>
                 </tr>
                 <tr className="hover:bg-blue-50/50">
                   <td className="px-6 py-3 text-teal-600 font-semibold">B2B_RECEIVABLE</td>
-                  <td className="px-6 py-3 text-[#64748B]">Corporate card limit, approval pending</td>
+                  <td className="px-6 py-3 text-[var(--rzp-ink-muted)]">Corporate card limit, approval pending</td>
                   <td className="px-6 py-3">Dual-channel WhatsApp + Accounts Ping</td>
                   <td className="px-6 py-3 text-emerald-600 font-bold">~71.5%</td>
                 </tr>
                 <tr className="hover:bg-blue-50/50">
                   <td className="px-6 py-3 text-rose-600 font-semibold">HARD_DECLINE</td>
-                  <td className="px-6 py-3 text-[#64748B]">Stolen card, invalid account number</td>
-                  <td className="px-6 py-3 text-[#64748B]">Gracefully Abort (Audit Logged)</td>
+                  <td className="px-6 py-3 text-[var(--rzp-ink-muted)]">Stolen card, invalid account number</td>
+                  <td className="px-6 py-3 text-[var(--rzp-ink-muted)]">Gracefully Abort (Audit Logged)</td>
                   <td className="px-6 py-3 text-[#94A3B8] font-bold">0% (Safe Opt-out)</td>
                 </tr>
               </tbody>
@@ -215,16 +215,16 @@ async def razorpay_webhook(request: Request):
       {activeTab === 'webhooks' && (
         <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
           <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200 bg-[#F8FAFC]">
-            <span className="text-xs font-mono text-[#2563EB]">sample_razorpay_event.json</span>
+            <span className="text-xs font-mono text-[var(--rzp-blue-600)]">sample_razorpay_event.json</span>
             <button
               onClick={() => handleCopy(webhookPayload, 'webhook')}
-              className="flex items-center gap-1 text-xs font-mono text-[#64748B] hover:text-[#1B1F36] px-2 py-1 rounded bg-white border border-slate-200 cursor-pointer"
+              className="flex items-center gap-1 text-xs font-mono text-[var(--rzp-ink-muted)] hover:text-[var(--rzp-ink)] px-2 py-1 rounded bg-white border border-slate-200 cursor-pointer"
             >
               {copiedKey === 'webhook' ? <CheckCircle2 size={12} className="text-emerald-600" /> : <Copy size={12} />}
               {copiedKey === 'webhook' ? 'Copied' : 'Copy'}
             </button>
           </div>
-          <pre className="p-5 font-mono text-xs text-[#334155] leading-relaxed overflow-x-auto select-text bg-[#F8FAFC]">
+          <pre className="p-5 font-mono text-xs text-[var(--rzp-ink)] leading-relaxed overflow-x-auto select-text bg-[#F8FAFC]">
             <code>{webhookPayload}</code>
           </pre>
         </div>
@@ -235,32 +235,32 @@ async def razorpay_webhook(request: Request):
         <div className="space-y-6">
           <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
             <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200 bg-[#F8FAFC]">
-              <span className="text-xs font-mono text-[#2563EB]">Node.js / TypeScript Integration</span>
+              <span className="text-xs font-mono text-[var(--rzp-blue-600)]">Node.js / TypeScript Integration</span>
               <button
                 onClick={() => handleCopy(nodeSnippet, 'node')}
-                className="flex items-center gap-1 text-xs font-mono text-[#64748B] hover:text-[#1B1F36] px-2 py-1 rounded bg-white border border-slate-200 cursor-pointer"
+                className="flex items-center gap-1 text-xs font-mono text-[var(--rzp-ink-muted)] hover:text-[var(--rzp-ink)] px-2 py-1 rounded bg-white border border-slate-200 cursor-pointer"
               >
                 {copiedKey === 'node' ? <CheckCircle2 size={12} className="text-emerald-600" /> : <Copy size={12} />}
                 {copiedKey === 'node' ? 'Copied' : 'Copy'}
               </button>
             </div>
-            <pre className="p-5 font-mono text-xs text-[#334155] leading-relaxed overflow-x-auto select-text bg-[#F8FAFC]">
+            <pre className="p-5 font-mono text-xs text-[var(--rzp-ink)] leading-relaxed overflow-x-auto select-text bg-[#F8FAFC]">
               <code>{nodeSnippet}</code>
             </pre>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
             <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200 bg-[#F8FAFC]">
-              <span className="text-xs font-mono text-[#2563EB]">Python (FastAPI / Celery) Integration</span>
+              <span className="text-xs font-mono text-[var(--rzp-blue-600)]">Python (FastAPI / Celery) Integration</span>
               <button
                 onClick={() => handleCopy(pythonSnippet, 'python')}
-                className="flex items-center gap-1 text-xs font-mono text-[#64748B] hover:text-[#1B1F36] px-2 py-1 rounded bg-white border border-slate-200 cursor-pointer"
+                className="flex items-center gap-1 text-xs font-mono text-[var(--rzp-ink-muted)] hover:text-[var(--rzp-ink)] px-2 py-1 rounded bg-white border border-slate-200 cursor-pointer"
               >
                 {copiedKey === 'python' ? <CheckCircle2 size={12} className="text-emerald-600" /> : <Copy size={12} />}
                 {copiedKey === 'python' ? 'Copied' : 'Copy'}
               </button>
             </div>
-            <pre className="p-5 font-mono text-xs text-[#334155] leading-relaxed overflow-x-auto select-text bg-[#F8FAFC]">
+            <pre className="p-5 font-mono text-xs text-[var(--rzp-ink)] leading-relaxed overflow-x-auto select-text bg-[#F8FAFC]">
               <code>{pythonSnippet}</code>
             </pre>
           </div>

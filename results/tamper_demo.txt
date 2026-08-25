@@ -1,0 +1,29 @@
+====================================================================
+  RecoverOS - Tamper Detection Demo
+====================================================================
+  Chain before : VALID, 388 entries
+  Head hash    : 1c61537bff157538c209bafea604ab5fbd3c3c82f78e5b0e7a15bcdba2a4c5c5
+--------------------------------------------------------------------
+  Target entry
+    sequence   : 104
+    payment    : pay_AF016p4bC8d
+    action     : WHATSAPP_LINK_SENT
+    cost       : 50 paise (Rs 0.50)
+--------------------------------------------------------------------
+  [1] Dropping append-only triggers (simulating full DB access)...
+  [2] Editing the cost directly via sqlite3, bypassing the ORM...
+      cost 50 paise -> 0 paise (spend hidden)
+  [3] Re-verifying the chain...
+--------------------------------------------------------------------
+  RESULT: TAMPERING DETECTED
+    broken at sequence : 104
+    entries verified   : 104 (before the break)
+    reason             : Content tampered at sequence 104 (payment pay_AF016p4bC8d, action WHATSAPP_LINK_SENT): stored hash c58ecf0dd3e618bf... but content hashes to 3acbe33b3bea995f...
+--------------------------------------------------------------------
+  [4] Restoring the original value and triggers...
+      chain restored: VALID
+====================================================================
+  Note: the tamper only succeeded because the triggers were dropped
+  first. Without that, SQLite itself rejects the UPDATE - and even
+  with full file access, the edit is still detected by the hash.
+====================================================================

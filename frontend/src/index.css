@@ -1,32 +1,50 @@
 @import "tailwindcss";
 
 /* ============================================================
-   RecoverOS — Razorpay Blade Design System Tokens & Foundations
-   Specification: Razorpay_UI_SILL.md
+   RecoverOS — Razorpay design alignment
+   Tokens traced from razorpay.com: a light surface, deep navy
+   ink, one saturated blue for action, and green reserved for
+   emphasis and active state.
    ============================================================ */
 
 @layer base {
   :root {
-    /* Razorpay Blade Color Tokens */
-    --color-navy-darkest: #02042B;
-    --color-navy-surface: #071026;
-    --color-navy-elevated: #0C1E3A;
-    --color-rzp-blue: #0B72E7;
-    --color-blue-bright: #2B84EA;
-    --color-electric-cyan: #38BDF8;
-    --color-neon-teal: #00D2D3;
-    --color-emerald-success: #10B981;
-    --color-amber-warning: #F59E0B;
-    --color-rose-danger: #EF4444;
+    /* Ink — headings are near-black navy, body text is muted slate */
+    --rzp-ink: #162F56;
+    --rzp-ink-strong: #0C2451;
+    --rzp-ink-muted: #5A607F;
+    --rzp-ink-faint: #8A90A6;
 
-    /* Typography scale */
+    /* Action blue. 600 carries buttons, 500 carries links and accents. */
+    --rzp-blue-600: #2B6DEF;
+    --rzp-blue-500: #3395FF;
+    --rzp-blue-700: #1B54C8;
+    --rzp-blue-050: #EEF4FF;
+
+    /* Green is emphasis and active-tab underline, never a button */
+    --rzp-green: #12B76A;
+    --rzp-green-dark: #039855;
+
+    /* Surfaces */
+    --rzp-surface: #FFFFFF;
+    --rzp-surface-alt: #F5F7FA;
+    --rzp-surface-sunken: #EDF0F5;
+    --rzp-border: #E3E8EF;
+    --rzp-border-strong: #CDD5E0;
+
+    /* Status */
+    --rzp-amber: #F79009;
+    --rzp-rose: #F04438;
+
     --font-sans: "Inter", "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
     --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   }
 
+  /* The app renders on a light surface. Painting html/body dark left a
+     navy band above the sticky header and behind any overscroll. */
   html {
-    background-color: #02042B;
-    color: #cbd5e1;
+    background-color: var(--rzp-surface);
+    color: var(--rzp-ink);
     font-family: var(--font-sans);
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
@@ -37,58 +55,186 @@
     margin: 0;
     padding: 0;
     min-height: 100vh;
-    background-color: #02042B;
+    background-color: var(--rzp-surface);
+    color: var(--rzp-ink);
+  }
+
+  /* Razorpay's headings are tight and heavy; the default tracking reads
+     too loose against theirs. */
+  h1, h2, h3 {
+    color: var(--rzp-ink);
+    letter-spacing: -0.02em;
+    font-weight: 700;
   }
 }
 
 /* ============================================================
-   Custom Scrollbar
+   Reusable Razorpay-style primitives
    ============================================================ */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+
+/* Primary call to action — solid blue, 8px radius, subtle lift */
+.rzp-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 8px;
+  background: var(--rzp-blue-600);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.875rem;
+  border: 1px solid var(--rzp-blue-600);
+  cursor: pointer;
+  transition: background 0.18s ease, box-shadow 0.18s ease;
 }
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(2, 4, 43, 0.4);
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 9999px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(11, 114, 231, 0.4);
+.rzp-btn-primary:hover {
+  background: var(--rzp-blue-700);
+  border-color: var(--rzp-blue-700);
 }
 
-/* Global scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Secondary — white with a blue hairline and blue label, as in the header */
+.rzp-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--rzp-blue-600);
+  font-weight: 700;
+  font-size: 0.875rem;
+  border: 1px solid var(--rzp-blue-600);
+  cursor: pointer;
+  transition: background 0.18s ease;
 }
-::-webkit-scrollbar-track {
-  background: #02042B;
+.rzp-btn-secondary:hover {
+  background: var(--rzp-blue-050);
 }
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 9999px;
+
+/* Text link with arrow, used beside the primary CTA */
+.rzp-link {
+  color: var(--rzp-blue-600);
+  font-weight: 700;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: color 0.18s ease;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(56, 189, 248, 0.3);
+.rzp-link:hover {
+  color: var(--rzp-blue-700);
+}
+
+/* Section tab strip — inactive is muted, active is ink with a green rule */
+.rzp-tab {
+  position: relative;
+  padding: 0.75rem 0.25rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--rzp-ink-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.18s ease;
+  white-space: nowrap;
+}
+.rzp-tab:hover {
+  color: var(--rzp-ink);
+}
+.rzp-tab[data-active="true"] {
+  color: var(--rzp-ink);
+  font-weight: 700;
+}
+.rzp-tab[data-active="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--rzp-green);
+}
+
+/* Header nav link — plain text, no pill. Razorpay's nav has no chips. */
+.rzp-nav-link {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--rzp-ink);
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.18s ease;
+  white-space: nowrap;
+}
+.rzp-nav-link:hover {
+  color: var(--rzp-blue-600);
+}
+.rzp-nav-link[data-active="true"] {
+  color: var(--rzp-blue-600);
+  font-weight: 700;
+}
+
+/* Page container — razorpay.com holds content to a 1280px column with
+   responsive gutters. Sections that need a full-bleed background put the
+   background on the <section> and this container on the inner div. */
+.rzp-container {
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+@media (min-width: 640px) { .rzp-container { padding-inline: 1.5rem; } }
+@media (min-width: 1024px) { .rzp-container { padding-inline: 2rem; } }
+
+/* Content card — white, hairline border, generous radius */
+.rzp-card {
+  background: var(--rzp-surface);
+  border: 1px solid var(--rzp-border);
+  border-radius: 16px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.rzp-card:hover {
+  border-color: var(--rzp-border-strong);
+  box-shadow: 0 8px 24px rgba(22, 47, 86, 0.06);
 }
 
 /* ============================================================
-   Animations & Transitions
+   Scrollbars — light to match the surface
+   ============================================================ */
+.custom-scrollbar::-webkit-scrollbar,
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track,
+::-webkit-scrollbar-track {
+  background: var(--rzp-surface-alt);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-thumb {
+  background: var(--rzp-border-strong);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:hover {
+  background: var(--rzp-ink-faint);
+}
+
+/* ============================================================
+   Animations
    ============================================================ */
 @keyframes move-flash {
   0% {
-    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.6);
+    box-shadow: 0 0 0 0 rgba(43, 109, 239, 0.45);
     transform: scale(0.98);
   }
   40% {
-    box-shadow: 0 0 20px 4px rgba(56, 189, 248, 0.3);
+    box-shadow: 0 0 20px 4px rgba(43, 109, 239, 0.22);
     transform: scale(1.02);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0);
+    box-shadow: 0 0 0 0 rgba(43, 109, 239, 0);
     transform: scale(1);
   }
 }
@@ -105,22 +251,16 @@
 }
 
 @keyframes overlay-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .animate-move-flash {
   animation: move-flash 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
-
 .animate-modal-in {
   animation: modal-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-
 .animate-overlay-in {
   animation: overlay-in 0.2s ease-out forwards;
 }

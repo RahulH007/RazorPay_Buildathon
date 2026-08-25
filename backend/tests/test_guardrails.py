@@ -19,8 +19,8 @@ def test_retry_cap_halts_after_maximum_retries(db_session, payment_record):
     db_session.add(record)
     db_session.commit()
 
-    for attempt in range(MAX_RETRIES):
-        log_audit(db_session, record, f"RETRY_SILENT_ATTEMPT_{attempt}")
+    for _ in range(MAX_RETRIES):
+        log_audit(db_session, record, "RETRY_SILENT_ATTEMPT")
 
     assert check_retry_cap(db_session, record) is True
     allowed, reason = run_all_guards(db_session, record)
@@ -33,7 +33,7 @@ def test_cac_ceiling_halts_when_record_cost_reaches_limit(db_session, payment_re
     db_session.add(record)
     db_session.commit()
 
-    log_audit(db_session, record, "WHATSAPP_LINK_SENT", cost=15.00)
+    log_audit(db_session, record, "WHATSAPP_LINK_SENT", cost_paise=1500)
 
     assert check_cac_ceiling(db_session, record) is True
     allowed, reason = run_all_guards(db_session, record)

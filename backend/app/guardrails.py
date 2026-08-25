@@ -12,12 +12,32 @@ from app.config import MAX_RETRIES, CAC_CEILING_PERCENT
 
 
 # --- Opt-Out Detection ---
-# Bilingual: English + Hindi/Hinglish stop phrases
+# Bilingual stop phrases: English + Hindi/Hinglish.
+#
+# Bare negation is deliberately excluded. The earlier patterns matched \bno\b
+# and \bnahi\b, which fire on "I have no money right now, will pay tomorrow"
+# and "abhi nahi, kal karunga" — both payment intent, not opt-out. Suppressing
+# a customer who was about to pay is the most expensive false positive here,
+# so a stop signal must be an unambiguous phrase.
 OPT_OUT_PATTERNS = [
-    r"\bstop\b", r"\bcancel\b", r"\bunsubscribe\b", r"\bno\b",
-    r"\bmat karo\b", r"\bband karo\b", r"\bnahi chahiye\b",
-    r"\bruk jao\b", r"\bband kar do\b", r"\bmat bhejo\b",
-    r"\bhatao\b", r"\bnahi\b", r"\bopt.?out\b",
+    # English
+    r"\bstop\b",
+    r"\bunsubscribe\b",
+    r"\bopt.?out\b",
+    r"\bremove me\b",
+    r"\bdon'?t (contact|call|message|text)\b",
+    r"\bno more (calls|messages|texts|reminders)\b",
+    r"\bleave me alone\b",
+    # Hindi / Hinglish — complete stop phrases, never bare negation
+    r"\bmat karo\b",
+    r"\bmat bhejo\b",
+    r"\bmat call karo\b",
+    r"\bband karo\b",
+    r"\bband kar do\b",
+    r"\bnahi chahiye\b",
+    r"\bcall mat\b",
+    r"\bpareshan mat\b",
+    r"\bhatao\b",
 ]
 
 
@@ -36,33 +56,79 @@ def check_opt_out(message: str) -> bool:
     return False
 
 
+# Actions that count as a customer-facing or bank-facing recovery attempt.
+# Matched exactly rather than by substring: the previous LIKE "%RETRY%" also
+# matched state-transition rows, making the count unpredictable.
+ATTEMPT_ACTIONS = (
+    "RETRY_SILENT_ATTEMPT",
+    "WHATSAPP_LINK_SENT",
+    "MANDATE_RESEQUENCED",
+    "VOICE_CALL_INITIATED",
+)
+
+
+def count_attempts(db: Session, record: PaymentFailureRecord) -> int:
+    """
+    Count recovery attempts made against this record *in the current batch*.
+
+    Scoping to batch_id is essential. The ledger is append-only, so a re-run
+    adds entries rather than replacing them; counting across all time meant
+    that by the fourth demo run every TRANSIENT_TECHNICAL record tripped the
+    cap on stale history and died instantly. The cap must measure this
+    episode, not the record's entire recorded past.
+    """
+    query = db.query(AuditTrailEntry).filter(
+        AuditTrailEntry.payment_id == record.payment_id,
+        AuditTrailEntry.action.in_(ATTEMPT_ACTIONS),
+    )
+    if record.batch_id:
+        query = query.filter(AuditTrailEntry.batch_id == record.batch_id)
+    return query.count()
+
+
+def spend_paise(db: Session, record: PaymentFailureRecord) -> int:
+    """Total spent on this record in the current batch, in paise."""
+    query = db.query(func.sum(AuditTrailEntry.cost_paise)).filter(
+        AuditTrailEntry.payment_id == record.payment_id,
+    )
+    if record.batch_id:
+        query = query.filter(AuditTrailEntry.batch_id == record.batch_id)
+    return query.scalar() or 0
+
+
+def cac_ceiling_paise(record: PaymentFailureRecord) -> int:
+    """The most we may spend recovering this payment, in paise."""
+    return record.amount * CAC_CEILING_PERCENT // 100
+
+
 def check_retry_cap(db: Session, record: PaymentFailureRecord) -> bool:
     """
-    Check if a record has exceeded the maximum retry limit.
-    Counts audit entries with RETRY in the action name.
-    Returns True if the cap has been reached (should halt).
+    True when the attempt cap has been reached and recovery should halt.
     """
-    retry_count = db.query(AuditTrailEntry).filter(
-        AuditTrailEntry.payment_id == record.payment_id,
-        AuditTrailEntry.action.like("%RETRY%"),
-    ).count()
-    return retry_count >= MAX_RETRIES
+    return count_attempts(db, record) >= MAX_RETRIES
 
 
 def check_cac_ceiling(db: Session, record: PaymentFailureRecord) -> bool:
     """
     Check if total recovery cost exceeds the CAC ceiling (15% of invoice GMV).
     Returns True if the ceiling has been breached (should halt).
+
+    Pure integer arithmetic: cross-multiplying instead of dividing keeps this
+    exact, where a float percentage would round at the boundary.
     """
-    total_cost = db.query(func.sum(AuditTrailEntry.cost_incurred_inr)).filter(
-        AuditTrailEntry.payment_id == record.payment_id,
-    ).scalar() or 0.0
+    return spend_paise(db, record) >= cac_ceiling_paise(record)
 
-    # Amount is in paise; convert to INR for comparison
-    amount_inr = record.amount / 100.0
-    ceiling = amount_inr * CAC_CEILING_PERCENT / 100.0
 
-    return total_cost >= ceiling
+def would_breach_cac(db: Session, record: PaymentFailureRecord, cost_paise: int) -> bool:
+    """
+    True when spending `cost_paise` on the next action would breach the ceiling.
+
+    Checked prospectively rather than after the fact. A retrospective check can
+    only notice a breach that has already happened, which is precisely why the
+    original ceiling never stopped anything: it ran once, before any spend
+    existed, and so was always comparing zero against the limit.
+    """
+    return spend_paise(db, record) + cost_paise > cac_ceiling_paise(record)
 
 
 def check_fraud_flag(record: PaymentFailureRecord) -> bool:

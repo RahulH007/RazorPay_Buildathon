@@ -68,13 +68,13 @@ export default function AskRayWidget({ onRunBatch, onNavigateTab }) {
       <div className="fixed bottom-5 right-5 z-40">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-[#0C2340] text-xs font-bold border border-slate-200 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-0.5 cursor-pointer font-sans"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-[var(--rzp-ink)] text-xs font-bold border border-slate-200 shadow-xl hover:shadow-2xl transition-all duration-200 hover:-translate-y-0.5 cursor-pointer font-sans"
         >
           {/* Green 4-point sparkle icon as in Razorpay Ray button */}
           <span className="flex h-4 w-4 items-center justify-center text-emerald-500">
             <Sparkles size={16} strokeWidth={2.5} className="fill-emerald-500 text-emerald-500" />
           </span>
-          <span className="tracking-tight text-sm font-extrabold text-[#0C2340]">
+          <span className="tracking-tight text-sm font-extrabold text-[var(--rzp-ink)]">
             Ask RAY
           </span>
         </button>
@@ -82,9 +82,9 @@ export default function AskRayWidget({ onRunBatch, onNavigateTab }) {
 
       {/* Ray AI Chat Dialog */}
       {isOpen && (
-        <div className="fixed bottom-20 right-5 z-50 w-full max-w-sm sm:max-w-md rounded-3xl border border-white/[0.12] bg-[#071026] shadow-2xl shadow-black/80 overflow-hidden flex flex-col h-[520px] animate-modal-in">
+        <div className="fixed bottom-20 right-5 z-50 flex h-[520px] w-full max-w-sm flex-col overflow-hidden rounded-2xl border border-[var(--rzp-border)] bg-white shadow-[0_24px_70px_rgba(22,47,86,0.18)] animate-modal-in sm:max-w-md">
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.08] bg-[#02042B]/90">
+          <div className="flex items-center justify-between border-b border-[var(--rzp-border)] px-5 py-4">
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 text-white shadow-md">
                 <Sparkles size={16} strokeWidth={2.5} />
@@ -96,12 +96,12 @@ export default function AskRayWidget({ onRunBatch, onNavigateTab }) {
                     Live
                   </span>
                 </div>
-                <div className="text-[10px] text-slate-400">Razorpay Recovery Intelligence</div>
+                <div className="text-[10px] text-[var(--rzp-ink-muted)]">Razorpay Recovery Intelligence</div>
               </div>
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+              className="rounded-lg p-1.5 text-[var(--rzp-ink-muted)] transition-colors hover:bg-[var(--rzp-surface-alt)] hover:text-[var(--rzp-ink)]"
             >
               <X size={16} />
             </button>
@@ -122,8 +122,8 @@ export default function AskRayWidget({ onRunBatch, onNavigateTab }) {
                 <div
                   className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 leading-relaxed ${
                     m.sender === 'user'
-                      ? 'bg-[#0B72E7] text-white rounded-br-xs'
-                      : 'bg-[#0C1E3A] text-slate-200 border border-white/[0.06] rounded-bl-xs'
+                      ? 'bg-[var(--rzp-blue-600)] text-white rounded-br-xs'
+                      : 'bg-[var(--rzp-surface-alt)] text-[var(--rzp-ink)] border border-[var(--rzp-border)] rounded-bl-xs'
                   }`}
                 >
                   <div>{m.text}</div>
@@ -134,12 +134,12 @@ export default function AskRayWidget({ onRunBatch, onNavigateTab }) {
           </div>
 
           {/* Quick Prompts Carousel */}
-          <div className="p-2.5 border-t border-white/[0.06] bg-[#02042B]/50 flex gap-1.5 overflow-x-auto custom-scrollbar">
+          <div className="custom-scrollbar flex gap-1.5 overflow-x-auto border-t border-[var(--rzp-border)] bg-[var(--rzp-surface-alt)] p-2.5">
             {QUICK_QUESTIONS.map((q, i) => (
               <button
                 key={i}
                 onClick={() => handleSend(q)}
-                className="shrink-0 px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-blue-600/20 border border-white/[0.08] text-[10px] text-slate-300 hover:text-cyan-300 transition-all font-mono"
+                className="shrink-0 rounded-lg border border-[var(--rzp-border)] bg-white px-2.5 py-1 font-mono text-[10px] text-[var(--rzp-ink-muted)] transition-colors hover:border-[var(--rzp-blue-600)] hover:text-[var(--rzp-blue-600)]"
               >
                 {q}
               </button>
@@ -147,18 +147,18 @@ export default function AskRayWidget({ onRunBatch, onNavigateTab }) {
           </div>
 
           {/* Input Bar */}
-          <div className="p-3 border-t border-white/[0.08] bg-[#071026] flex items-center gap-2">
+          <div className="flex items-center gap-2 border-t border-[var(--rzp-border)] bg-white p-3">
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder="Ask Ray about failure diagnostics or recovery..."
-              className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+              className="flex-1 rounded-xl border border-[var(--rzp-border)] bg-white px-3 py-2 text-xs text-[var(--rzp-ink)] placeholder-[var(--rzp-ink-faint)] focus:border-[var(--rzp-blue-600)] focus:outline-none"
             />
             <button
               onClick={() => handleSend()}
-              className="p-2 rounded-xl bg-[#0B72E7] hover:bg-[#2B84EA] text-white transition-all shadow-md shadow-blue-500/20"
+              className="rounded-xl bg-[var(--rzp-blue-600)] p-2 text-white transition-colors hover:bg-[var(--rzp-blue-700)]"
             >
               <Send size={14} />
             </button>

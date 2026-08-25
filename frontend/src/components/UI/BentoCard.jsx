@@ -10,7 +10,7 @@ const ICONS = {
 
 export default function BentoCard({ 
   icon = 'zap', 
-  iconColor = 'text-[#2563EB]',
+  iconColor = 'text-[var(--rzp-blue-600)]',
   iconBg = 'bg-blue-50 border-blue-200',
   badgeLabel = '+24.8% Reclaimed',
   badgeColor = 'bg-emerald-50 border-emerald-200 text-emerald-700',
@@ -33,8 +33,8 @@ export default function BentoCard({
           {badgeLabel}
         </span>
       </div>
-      <h3 className="text-lg font-semibold text-[#1B1F36] mb-2 group-hover:text-[#2563EB] transition-colors">{title}</h3>
-      <p className="text-sm text-[#64748B] leading-relaxed">{description}</p>
+      <h3 className="text-lg font-semibold text-[var(--rzp-ink)] mb-2 group-hover:text-[var(--rzp-blue-600)] transition-colors">{title}</h3>
+      <p className="text-sm text-[var(--rzp-ink-muted)] leading-relaxed">{description}</p>
     </div>
   );
 }

@@ -1,12 +1,17 @@
 """
 RecoverOS State Machine
 FSM managing payment recovery lifecycle: INGESTED → DIAGNOSED → INTERVENING → RECOVERED/FAILED_STOPPED
+
+Every transition and every intermediate action is written through the ledger
+(app/ledger.py), so the audit trail is a tamper-evident hash chain rather than
+an ordinary table. Callers keep the same signatures they always had.
 """
 
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
+from app import ledger
 from app.models import PaymentFailureRecord, AuditTrailEntry
 from app.websocket_manager import manager
 
@@ -14,7 +19,10 @@ from app.websocket_manager import manager
 # Valid state transitions
 VALID_TRANSITIONS = {
     "INGESTED": ["DIAGNOSED"],
-    "DIAGNOSED": ["INTERVENING", "FAILED_STOPPED"],
+    # DIAGNOSED -> RECOVERED covers a payment captured without any
+    # intervention: the holdout control arm, and the real case of a
+    # customer retrying while we are still deciding.
+    "DIAGNOSED": ["INTERVENING", "RECOVERED", "FAILED_STOPPED"],
     "INTERVENING": ["RECOVERED", "FAILED_STOPPED"],
     "RECOVERED": [],       # Terminal state
     "FAILED_STOPPED": [],  # Terminal state
@@ -24,6 +32,7 @@ VALID_TRANSITIONS = {
 TRANSITION_TRIGGERS = {
     ("INGESTED", "DIAGNOSED"): "classify",
     ("DIAGNOSED", "INTERVENING"): "start_recovery",
+    ("DIAGNOSED", "RECOVERED"): "captured_without_intervention",
     ("DIAGNOSED", "FAILED_STOPPED"): "hard_decline",
     ("INTERVENING", "RECOVERED"): "payment_captured",
     ("INTERVENING", "FAILED_STOPPED"): "timeout_or_opt_out",
@@ -35,18 +44,38 @@ def validate_transition(from_state: str, to_state: str) -> bool:
     return to_state in VALID_TRANSITIONS.get(from_state, [])
 
 
+def _ledger_kwargs(llm_metadata: dict | None) -> dict:
+    """
+    Translate the caller-facing LLM metadata dict into ledger fields.
+
+    Confidence arrives as a 0.0-1.0 float and is stored as integer basis
+    points, because floats must never enter a hash preimage.
+    """
+    if not llm_metadata:
+        return {}
+
+    confidence = llm_metadata.get("confidence")
+    return {
+        "llm_model": llm_metadata.get("model"),
+        "llm_input_tokens": llm_metadata.get("input_tokens"),
+        "llm_output_tokens": llm_metadata.get("output_tokens"),
+        "llm_latency_ms": llm_metadata.get("latency_ms"),
+        "llm_confidence_bp": None if confidence is None else round(confidence * 10000),
+    }
+
+
 async def transition_state(
     db: Session,
     record: PaymentFailureRecord,
     to_state: str,
     actor: str = "system",
     details: str = "",
-    cost: float = 0.0,
+    cost_paise: int = 0,
     llm_metadata: dict = None,
 ) -> bool:
     """
     Transition a payment record to a new state.
-    Writes an audit trail entry and broadcasts a WebSocket event.
+    Appends a ledger entry and broadcasts a WebSocket event.
     Returns True if transition was successful.
     """
     from_state = record.recovery_state
@@ -64,26 +93,16 @@ async def transition_state(
     trigger = TRANSITION_TRIGGERS.get((from_state, to_state), f"{from_state}_TO_{to_state}")
     action = f"STATE_{from_state}_TO_{to_state}"
 
-    # Create audit trail entry
-    audit_entry = AuditTrailEntry(
+    ledger.append_entry(
+        db,
         payment_id=record.payment_id,
-        timestamp=datetime.now(timezone.utc),
+        batch_id=record.batch_id,
         action=action,
         actor=actor,
         details=details or f"Transition triggered by: {trigger}",
-        cost_incurred_inr=cost,
+        cost_paise=cost_paise,
+        **_ledger_kwargs(llm_metadata),
     )
-
-    # Add LLM metadata if present
-    if llm_metadata:
-        audit_entry.llm_model = llm_metadata.get("model")
-        audit_entry.llm_input_tokens = llm_metadata.get("input_tokens")
-        audit_entry.llm_output_tokens = llm_metadata.get("output_tokens")
-        audit_entry.llm_latency_ms = llm_metadata.get("latency_ms")
-        audit_entry.llm_confidence = llm_metadata.get("confidence")
-
-    db.add(audit_entry)
-    db.commit()
     db.refresh(record)
 
     # Broadcast WebSocket event
@@ -115,29 +134,20 @@ def log_audit(
     action: str,
     actor: str = "system",
     details: str = "",
-    cost: float = 0.0,
+    cost_paise: int = 0,
     llm_metadata: dict = None,
 ) -> AuditTrailEntry:
     """
-    Log an audit trail entry without a state transition.
+    Append a ledger entry without a state transition.
     Used for intermediate actions (e.g., classification, retry attempt).
     """
-    entry = AuditTrailEntry(
+    return ledger.append_entry(
+        db,
         payment_id=record.payment_id,
-        timestamp=datetime.now(timezone.utc),
+        batch_id=record.batch_id,
         action=action,
         actor=actor,
         details=details,
-        cost_incurred_inr=cost,
+        cost_paise=cost_paise,
+        **_ledger_kwargs(llm_metadata),
     )
-
-    if llm_metadata:
-        entry.llm_model = llm_metadata.get("model")
-        entry.llm_input_tokens = llm_metadata.get("input_tokens")
-        entry.llm_output_tokens = llm_metadata.get("output_tokens")
-        entry.llm_latency_ms = llm_metadata.get("latency_ms")
-        entry.llm_confidence = llm_metadata.get("confidence")
-
-    db.add(entry)
-    db.commit()
-    return entry

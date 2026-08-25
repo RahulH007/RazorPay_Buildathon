@@ -5,6 +5,7 @@ GET /api/audit/{payment_id} — Ordered audit trail entries with LLM metadata
 
 from fastapi import APIRouter, HTTPException
 
+from app import ledger
 from app.database import SessionLocal
 from app.models import AuditTrailEntry, PaymentFailureRecord
 
@@ -27,24 +28,30 @@ async def get_audit_trail(payment_id: str):
         if not record:
             raise HTTPException(status_code=404, detail=f"Record not found: {payment_id}")
 
-        # Get ordered audit trail
+        # Ordered by chain position, which is also chronological order
         entries = db.query(AuditTrailEntry).filter(
             AuditTrailEntry.payment_id == payment_id
-        ).order_by(AuditTrailEntry.timestamp).all()
+        ).order_by(AuditTrailEntry.sequence_no).all()
 
-        # Calculate cumulative cost
-        cumulative_cost = 0.0
+        # Cumulative cost accumulates in integer paise — exact by construction
+        cumulative_paise = 0
         trail = []
         for entry in entries:
-            cumulative_cost += entry.cost_incurred_inr or 0
+            cumulative_paise += entry.cost_paise or 0
             trail.append({
                 "id": entry.id,
-                "timestamp": entry.timestamp.isoformat() if entry.timestamp else None,
+                "sequence_no": entry.sequence_no,
+                "prev_hash": entry.prev_hash,
+                "entry_hash": entry.entry_hash,
+                "timestamp": ledger.us_to_iso(entry.timestamp_us),
+                "timestamp_us": entry.timestamp_us,
                 "action": entry.action,
                 "actor": entry.actor,
                 "details": entry.details,
-                "cost_incurred_inr": entry.cost_incurred_inr or 0,
-                "cumulative_cost_inr": round(cumulative_cost, 2),
+                "cost_paise": entry.cost_paise or 0,
+                "cost_inr": (entry.cost_paise or 0) / 100.0,
+                "cumulative_cost_paise": cumulative_paise,
+                "cumulative_cost_inr": cumulative_paise / 100.0,
                 "llm_metadata": {
                     "model": entry.llm_model,
                     "input_tokens": entry.llm_input_tokens,
@@ -53,6 +60,8 @@ async def get_audit_trail(payment_id: str):
                     "confidence": entry.llm_confidence,
                 } if entry.llm_model else None,
             })
+
+        verification = ledger.verify_payment(db, payment_id)
 
         return {
             "payment_id": payment_id,
@@ -64,8 +73,26 @@ async def get_audit_trail(payment_id: str):
                 "customer_name": record.customer_name,
             },
             "total_entries": len(trail),
-            "total_cost_inr": round(cumulative_cost, 2),
+            "total_cost_paise": cumulative_paise,
+            "total_cost_inr": cumulative_paise / 100.0,
+            "verification": verification.to_dict(),
             "audit_trail": trail,
         }
+    finally:
+        db.close()
+
+
+@router.get("/audit/{payment_id}/verify")
+async def verify_payment_trail(payment_id: str):
+    """Recompute the hash of every entry belonging to this payment."""
+    db = SessionLocal()
+    try:
+        exists = db.query(PaymentFailureRecord).filter(
+            PaymentFailureRecord.payment_id == payment_id
+        ).first()
+        if not exists:
+            raise HTTPException(status_code=404, detail=f"Record not found: {payment_id}")
+
+        return ledger.verify_payment(db, payment_id).to_dict()
     finally:
         db.close()

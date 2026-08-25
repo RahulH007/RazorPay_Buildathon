@@ -1,0 +1,14 @@
+====================================================================
+  RecoverOS - Ledger Verification
+====================================================================
+  Database        : sqlite:///E:/Razorpay/backend/recoveros_demo.db
+  Preimage version: 1
+  Genesis prev    : 00000000000000000000000000000000...
+--------------------------------------------------------------------
+  Entries checked : 388
+  Total spend     : Rs 30.00 (3000 paise)
+  Head hash       : 1c61537bff157538c209bafea604ab5fbd3c3c82f78e5b0e7a15bcdba2a4c5c5
+--------------------------------------------------------------------
+  RESULT: VALID - every entry hashes correctly, links to its
+          predecessor, and no sequence number is missing.
+====================================================================

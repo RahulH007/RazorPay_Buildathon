@@ -28,8 +28,8 @@ import {
   BookOpen, 
   User, 
   ArrowRight,
-  Smartphone,
   Headphones,
+  ChevronDown,
   X
 } from 'lucide-react';
 
@@ -42,17 +42,24 @@ import api from './utils/api';
 
 const TERMINAL_STATES = new Set(['RECOVERED', 'FAILED_STOPPED']);
 
+const CLASS_FILTERS = [
+  { key: 'ALL', label: 'All Payments' },
+  { key: 'TRANSIENT_TECHNICAL', label: 'Transient' },
+  { key: 'AUTH_FRICTION', label: 'Auth Friction' },
+  { key: 'MANDATE_BALANCE', label: 'Mandate' },
+  { key: 'B2B_RECEIVABLE', label: 'B2B' },
+  { key: 'HARD_DECLINE', label: 'Hard Decline' },
+];
+
 const NAV_ITEMS = [
-  { key: 'home', label: 'Home', icon: Home },
-  { key: 'overview', label: 'Dashboard', icon: LayoutDashboard },
-  { key: 'console', label: 'Console (Engine)', icon: Terminal },
-  { key: 'docs', label: 'Docs', icon: BookOpen },
-  { key: 'about', label: 'About Rahul', icon: User },
+  { key: 'home', label: 'Home' },
+  { key: 'overview', label: 'Recovery' },
+  { key: 'console', label: 'Engine' },
+  { key: 'docs', label: 'Resources' },
+  { key: 'about', label: 'About' },
 ];
 
 // All pages use the official Razorpay white theme
-const LIGHT_THEME_TABS = new Set(['home', 'overview', 'console', 'docs', 'about']);
-
 const BENTO_CARDS = [
   {
     icon: 'zap',
@@ -87,6 +94,7 @@ function App() {
   const [recordMap, setRecordMap] = useState({});
   const [metrics, setMetrics] = useState(null);
   const [selectedRecordId, setSelectedRecordId] = useState(null);
+  const [classFilter, setClassFilter] = useState('ALL');
   const [auditRecord, setAuditRecord] = useState(null);
   const [processingId, setProcessingId] = useState(null);
   const [progressLocal, setProgressLocal] = useState(null);
@@ -286,6 +294,10 @@ function App() {
   };
 
   const records = Object.values(recordMap);
+  const filteredRecords =
+    classFilter === 'ALL'
+      ? records
+      : records.filter((r) => r.failure_class === classFilter);
   const latestRecordId =
     ws.stateChange?.payment_id ||
     [...records].reverse().find((r) => r.audit_trail !== undefined)?.payment_id ||
@@ -307,93 +319,63 @@ function App() {
     }
   };
 
-  const isLightTheme = LIGHT_THEME_TABS.has(activeNav);
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans transition-colors duration-300 ${
-      isLightTheme
-        ? 'bg-white text-[#0C2340] selection:bg-blue-500/20'
-        : 'bg-[#02042B] text-slate-100 selection:bg-cyan-500/30 selection:text-white'
-    }`}>
-      {/* ================= STICKY HEADER (Razorpay.com Official Style) ================= */}
-      <header className={`sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between px-4 sm:px-6 lg:px-8 transition-colors duration-300 ${
-        isLightTheme
-          ? 'bg-white/95 border-b border-slate-200 backdrop-blur-lg shadow-sm'
-          : 'bg-[#071026]/85 border-b border-white/[0.08] backdrop-blur-xl'
-      }`}>
-        {/* Left: Razorpay Brand Logo */}
-        <div className="flex items-center gap-3">
-          <RazorpayLogo isLight={isLightTheme} />
-        </div>
+    <div className="flex min-h-screen flex-col bg-white font-sans text-[var(--rzp-ink)] selection:bg-[var(--rzp-blue-050)]">
+      {/* ================= STICKY HEADER (razorpay.com) =================
+          Plain text nav, no icons and no active pill: Razorpay's header uses
+          colour alone to mark the current section. Login is an outlined blue
+          button, Sign Up is solid blue with a trailing arrow. */}
+      <header className="sticky top-0 z-40 h-16 shrink-0 border-b border-[var(--rzp-border)] bg-white">
+        <div className="mx-auto flex h-full max-w-[1280px] items-center justify-between px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-8">
+            <RazorpayLogo isLight />
 
-        {/* Center: Navigation Bar (Matches Razorpay.com text-link style) */}
-        <nav className="hidden md:flex items-center gap-1">
-          {NAV_ITEMS.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-semibold transition-all duration-200 cursor-pointer ${
-                isLightTheme
-                  ? activeNav === key
-                    ? 'bg-[#0B72E7] text-white shadow-sm'
-                    : 'text-[#334155] hover:text-[#0C2340] hover:bg-slate-100'
-                  : activeNav === key
-                    ? 'bg-blue-600/20 text-cyan-300 border border-blue-500/40 shadow-sm shadow-blue-500/10'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
-              }`}
-              onClick={() => setActiveNav(key)}
-            >
-              <Icon size={14} strokeWidth={2} />
-              {label}
-            </button>
-          ))}
-        </nav>
-
-        {/* Right: Support, Country, Login, Sign Up (Matches Razorpay.com) */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button 
-            title="Support"
-            onClick={() => setActiveNav('docs')}
-            className={`p-1.5 rounded-lg transition-colors hidden sm:flex items-center cursor-pointer ${
-              isLightTheme
-                ? 'text-[#475569] hover:text-[#0C2340] hover:bg-slate-100'
-                : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-            }`}
-          >
-            <Headphones size={18} />
-          </button>
-
-          <div className={`hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold ${
-            isLightTheme
-              ? 'bg-white border border-slate-200 text-[#0C2340]'
-              : 'bg-white/[0.03] border border-white/[0.06] text-slate-200'
-          }`}>
-            <span>🇮🇳</span>
-            <span className={`text-[10px] ${isLightTheme ? 'text-slate-400' : 'text-slate-400'}`}>▾</span>
+            <nav className="hidden items-center gap-1 lg:flex">
+              {NAV_ITEMS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  className="rzp-nav-link"
+                  data-active={activeNav === key}
+                  onClick={() => setActiveNav(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </nav>
           </div>
 
-          <button
-            onClick={() => setActiveNav('overview')}
-            className={`px-4 py-1.5 rounded-lg text-[13px] font-bold transition-colors hidden sm:inline-flex cursor-pointer ${
-              isLightTheme
-                ? 'border border-slate-300 text-[#0C2340] hover:bg-slate-50'
-                : 'border border-blue-500/40 text-cyan-300 hover:bg-blue-600/10'
-            }`}
-          >
-            Login
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              title="Support"
+              onClick={() => setActiveNav('docs')}
+              className="hidden text-[var(--rzp-ink)] transition-colors hover:text-[var(--rzp-blue-600)] sm:flex cursor-pointer"
+            >
+              <Headphones size={20} strokeWidth={1.75} />
+            </button>
 
-          <button
-            onClick={handleLaunchSimulator}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0B72E7] hover:bg-[#0055D4] text-white text-[13px] font-bold shadow-md shadow-blue-600/20 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-          >
-            <span>Sign Up</span>
-            <ArrowRight size={13} strokeWidth={2.5} />
-          </button>
+            <button className="hidden items-center gap-1 text-[var(--rzp-ink-muted)] sm:flex cursor-pointer">
+              <span className="text-lg leading-none">🇮🇳</span>
+              <ChevronDown size={16} strokeWidth={2} />
+            </button>
+
+            <button
+              onClick={() => setActiveNav('overview')}
+              className="rzp-btn-secondary hidden sm:inline-flex"
+            >
+              Login
+            </button>
+
+            <button onClick={handleLaunchSimulator} className="rzp-btn-primary">
+              <span>Sign Up</span>
+              <ArrowRight size={15} strokeWidth={2.5} />
+            </button>
+          </div>
         </div>
       </header>
 
       {/* ================= MAIN CONTAINER ================= */}
-      <main className="flex-1 max-w-[1680px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="w-full flex-1">
         {/* Dynamic View 0: Home Page (Sovereign AI Hero & Interactive Simulator) */}
         {activeNav === 'home' && (
           <HomeView 
@@ -403,25 +385,27 @@ function App() {
           />
         )}
 
+        {/* Views other than Home render inside the shared content column;
+            Home manages its own because its hero is full-bleed. */}
         {/* Dynamic View 1: Console / Telemetry */}
         {activeNav === 'console' && (
-          <ConsoleView 
+          <div className="rzp-container py-8"><ConsoleView 
             records={records} 
             isConnected={ws.isConnected} 
             onRunBatch={handleRunBatch}
             isRunning={batch.isRunning}
-          />
+          /></div>
         )}
 
         {/* Dynamic View 2: Docs */}
-        {activeNav === 'docs' && <DocsView />}
+        {activeNav === 'docs' && <div className="rzp-container py-8"><DocsView /></div>}
 
         {/* Dynamic View 3: About Rahul */}
-        {activeNav === 'about' && <AboutRahulView />}
+        {activeNav === 'about' && <div className="rzp-container py-8"><AboutRahulView /></div>}
 
         {/* Dynamic View 4: Primary Overview Dashboard */}
         {activeNav === 'overview' && (
-          <div className="flex flex-col xl:flex-row gap-6 items-start">
+          <div className="rzp-container flex flex-col items-start gap-6 py-8 xl:flex-row">
             {/* Left Col: Main RecoverOS Dashboard */}
             <div className="flex-1 min-w-0 space-y-6">
               {/* Hero Section */}
@@ -440,14 +424,14 @@ function App() {
                     />
 
                     <h1 className="mt-4 text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.15]">
-                      <span className="text-[#1B1F36]">Autonomous Revenue Recovery</span>
+                      <span className="text-[var(--rzp-ink)]">Autonomous Revenue Recovery</span>
                       <br />
-                      <span className="text-[#2563EB]">
+                      <span className="text-[var(--rzp-blue-600)]">
                         Engineered for Scale.
                       </span>
                     </h1>
 
-                    <p className="mt-4 text-sm sm:text-base leading-relaxed text-[#64748B] max-w-xl">
+                    <p className="mt-4 text-sm sm:text-base leading-relaxed text-[var(--rzp-ink-muted)] max-w-xl">
                       Detect failed Razorpay checkouts, diagnose root causes in &lt;18ms, re-engage customers via WhatsApp/Hinglish Voice, and eliminate churn — every rupee accounted for.
                     </p>
 
@@ -469,20 +453,20 @@ function App() {
                     {/* Live Telemetry Mini Grid */}
                     <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl border border-slate-200 bg-white shadow-sm">
                       <div className="p-2 rounded-xl bg-[#F8FAFC] border border-slate-100">
-                        <span className="text-[10px] font-mono text-[#64748B] block">AI DIAGNOSIS</span>
-                        <span className="text-xs font-mono font-bold text-[#2563EB]">14.2ms avg</span>
+                        <span className="text-[10px] font-mono text-[var(--rzp-ink-muted)] block">AI DIAGNOSIS</span>
+                        <span className="text-xs font-mono font-bold text-[var(--rzp-blue-600)]">14.2ms avg</span>
                       </div>
                       <div className="p-2 rounded-xl bg-[#F8FAFC] border border-slate-100">
-                        <span className="text-[10px] font-mono text-[#64748B] block">RECOVERED (UPI)</span>
+                        <span className="text-[10px] font-mono text-[var(--rzp-ink-muted)] block">RECOVERED (UPI)</span>
                         <span className="text-xs font-mono font-bold text-emerald-600">₹4,990 Instant</span>
                       </div>
                       <div className="p-2 rounded-xl bg-[#F8FAFC] border border-slate-100">
-                        <span className="text-[10px] font-mono text-[#64748B] block">ACTIVE CHANNELS</span>
+                        <span className="text-[10px] font-mono text-[var(--rzp-ink-muted)] block">ACTIVE CHANNELS</span>
                         <span className="text-xs font-mono font-bold text-violet-600">WhatsApp / Voice</span>
                       </div>
                       <div className="p-2 rounded-xl bg-[#F8FAFC] border border-slate-100">
-                        <span className="text-[10px] font-mono text-[#64748B] block">ENCRYPTED AUDIT</span>
-                        <span className="text-xs font-mono font-bold text-[#2563EB]">100% Immutable</span>
+                        <span className="text-[10px] font-mono text-[var(--rzp-ink-muted)] block">ENCRYPTED AUDIT</span>
+                        <span className="text-xs font-mono font-bold text-[var(--rzp-blue-600)]">100% Immutable</span>
                       </div>
                     </div>
                   </div>
@@ -501,10 +485,33 @@ function App() {
                 <MetricRibbon metrics={metrics} totalRecords={records.length} />
               </section>
 
-              {/* 5-Stage Kanban Pipeline Board */}
+              {/* 5-Stage Kanban Pipeline Board, filterable by failure class.
+                  Razorpay uses this tab pattern to switch the content beneath
+                  it, so it drives a real filter here rather than decorating. */}
               <section>
+                <div className="mb-4 flex items-center gap-6 overflow-x-auto border-b border-[var(--rzp-border)]">
+                  {CLASS_FILTERS.map(({ key, label }) => {
+                    const count = key === 'ALL'
+                      ? records.length
+                      : records.filter((r) => r.failure_class === key).length;
+                    return (
+                      <button
+                        key={key}
+                        className="rzp-tab"
+                        data-active={classFilter === key}
+                        onClick={() => setClassFilter(key)}
+                      >
+                        {label}
+                        <span className="ml-1.5 font-mono text-[11px] text-[var(--rzp-ink-faint)]">
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
                 <KanbanBoard 
-                  records={records} 
+                  records={filteredRecords} 
                   onCardClick={handleCardClick} 
                   processingId={processingId}
                   selectedRecordId={selectedRecordId}

@@ -21,8 +21,23 @@ async def test_recovery_batch_end_to_end(db_session, monkeypatch):
     ).all()
 
     assert result["status"] == "COMPLETED"
-    assert len(records) == 50
-    assert all(record.recovery_state in {"RECOVERED", "FAILED_STOPPED"} for record in records)
+    assert len(records) == len(simulator.load_dataset())
+    # Every record reaches a terminal state EXCEPT those deferred by quiet
+    # hours, which stay open by design: a deferral is not a stop, and the call
+    # still has to be placed once the window opens.
+    deferred = {
+        entry.payment_id
+        for entry in db_session.query(AuditTrailEntry).filter(
+            AuditTrailEntry.action == "POLICY_DECLINED_QUIET_HOURS_DEFERRED"
+        )
+    }
+    for record in records:
+        if record.payment_id in deferred:
+            assert record.recovery_state == "INTERVENING", (
+                f"{record.payment_id} was deferred, so it must remain open"
+            )
+        else:
+            assert record.recovery_state in {"RECOVERED", "FAILED_STOPPED"}
     assert result["recovered_gmv"] > 0
 
     hard_declines = [record for record in records if record.failure_class == "HARD_DECLINE"]

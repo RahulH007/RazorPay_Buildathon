@@ -4,6 +4,8 @@ Loads environment variables and defines system constants.
 """
 
 import os
+from datetime import timedelta, timezone
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -27,7 +29,27 @@ MAX_RETRIES = 3
 CAC_CEILING_PERCENT = 15  # Max recovery cost as % of invoice GMV
 SETTLEMENT_TIMEOUT_MINUTES = 30
 CONFIDENCE_THRESHOLD = 0.7
+CONFIDENCE_THRESHOLD_BP = int(CONFIDENCE_THRESHOLD * 10000)  # basis points
 DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"
+
+# Deterministic simulation. Printed in every batch result header so a reported
+# number can always be reproduced.
+RECOVEROS_SEED = int(os.getenv("RECOVEROS_SEED", "20260825"))
+
+# Assumed merchant gross margin. Recovering Rs 1,000 of GMV is not worth
+# Rs 1,000 to the merchant - it is worth the margin on it. Stated here rather
+# than buried inside a formula, because it decides whether we spend money.
+MERCHANT_MARGIN_PERCENT = int(os.getenv("MERCHANT_MARGIN_PERCENT", "20"))
+
+# Share of contacts left deliberately untreated so recovery attributable to
+# this system can be separated from recovery that would have happened anyway.
+HOLDOUT_PERCENT = int(os.getenv("HOLDOUT_PERCENT", "20"))
+
+# --- Consent & Quiet Hours ---
+# TRAI restricts promotional voice calls to 09:00-21:00 IST.
+IST = timezone(timedelta(hours=5, minutes=30))
+QUIET_HOURS_START_HOUR = 21  # 21:00 IST — no calls from here
+QUIET_HOURS_END_HOUR = 9     # 09:00 IST — calls permitted from here
 
 # --- Recovery Rate Probabilities (from blueprint §7) ---
 RECOVERY_RATES = {
@@ -38,13 +60,17 @@ RECOVERY_RATES = {
     "HARD_DECLINE": 0.00,
 }
 
-# --- Channel Costs in INR ---
-CHANNEL_COSTS = {
-    "TRANSIENT_TECHNICAL": 0.00,   # Silent retry — API call only
-    "AUTH_FRICTION": 0.50,          # WhatsApp message
-    "MANDATE_BALANCE": 0.50,        # UPI resequence nudge
-    "B2B_RECEIVABLE": 2.00,         # Hinglish voice call
-    "HARD_DECLINE": 0.00,           # No action
+# --- Channel Costs in PAISE ---
+# Integer paise, never float. These values feed ledger hashes, and float
+# arithmetic is not reproducible across runtimes (0.1 + 0.2 != 0.3), which
+# would break independent verification. Matches the existing convention for
+# PaymentFailureRecord.amount. Divide by 100 only when rendering.
+CHANNEL_COSTS_PAISE = {
+    "TRANSIENT_TECHNICAL": 0,    # Silent retry — API call only
+    "AUTH_FRICTION": 50,         # WhatsApp message (₹0.50)
+    "MANDATE_BALANCE": 50,       # UPI resequence nudge (₹0.50)
+    "B2B_RECEIVABLE": 200,       # Hinglish voice call (₹2.00)
+    "HARD_DECLINE": 0,           # No action
 }
 
 # --- Recovery Channel Mapping ---

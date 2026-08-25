@@ -5,6 +5,8 @@ GET /api/metrics/dashboard — Aggregated dashboard metrics
 
 from fastapi import APIRouter
 
+from app import ledger
+from app.config import MERCHANT_MARGIN_PERCENT
 from app.database import SessionLocal
 from app.models import PaymentFailureRecord, AuditTrailEntry, BatchRun
 from sqlalchemy import func
@@ -30,13 +32,33 @@ async def get_dashboard_metrics():
                 "total_gmv": 0,
                 "recovered_gmv": 0,
                 "recovery_rate": 0.0,
+                "total_channel_cost_paise": 0,
                 "total_channel_cost": 0.0,
+                "net_roi_paise": 0,
                 "net_roi": 0.0,
+                "cost_per_recovery_paise": 0,
                 "cost_per_recovery": 0.0,
                 "recovered_count": 0,
                 "failed_count": 0,
                 "in_progress_count": 0,
                 "class_breakdown": [],
+                "lift": {
+                "treated_count": len(treated),
+                "control_count": len(control),
+                "treated_recovered": len(treated_recovered),
+                "control_recovered": len(control_recovered),
+                "treated_rate": round(treated_rate, 1),
+                "control_rate": round(control_rate, 1),
+                "lift_pp": round(treated_rate - control_rate, 1),
+                "merchant_margin_percent": MERCHANT_MARGIN_PERCENT,
+                # A batch this small cannot carry a causal claim; the demo
+                # shows mechanism, results/lift_analysis.md carries the number.
+                "sample_warning": (
+                    f"n={len(control)} controls - too small for a reliable "
+                    f"estimate. See results/lift_analysis.md."
+                ) if len(control) < 100 else None,
+            },
+            "ledger": {"head_hash": None, "entries": 0},
                 "records": [],
             }
 
@@ -49,12 +71,23 @@ async def get_dashboard_metrics():
         recovered_gmv = sum(r.amount for r in recovered)
         recovered_count = len(recovered)
 
-        # Total channel cost from audit trail
-        total_channel_cost = db.query(func.sum(AuditTrailEntry.cost_incurred_inr)).scalar() or 0.0
+        # Channel cost scoped to the batches the current records belong to.
+        #
+        # The ledger is append-only, so re-running a batch correctly adds new
+        # entries rather than replacing old ones. Summing the whole ledger
+        # while GMV stays pinned to the same 50 records made cost climb on
+        # every run (24.50 -> 49.00 -> 73.50). Scoping by batch_id keeps spend
+        # and revenue measured over the same run.
+        active_batches = {r.batch_id for r in records if r.batch_id}
+        cost_query = db.query(func.sum(AuditTrailEntry.cost_paise))
+        if active_batches:
+            cost_query = cost_query.filter(AuditTrailEntry.batch_id.in_(active_batches))
+        total_channel_cost_paise = cost_query.scalar() or 0
 
         recovery_rate = (recovered_count / total_records * 100) if total_records > 0 else 0
-        net_roi = (recovered_gmv / 100) - total_channel_cost  # Convert paise to INR
-        cost_per_recovery = total_channel_cost / max(recovered_count, 1)
+        # Integer paise throughout; render to rupees only at the boundary.
+        net_roi_paise = recovered_gmv - total_channel_cost_paise
+        cost_per_recovery_paise = total_channel_cost_paise // max(recovered_count, 1)
 
         # Per-class breakdown
         class_data = {}
@@ -67,7 +100,7 @@ async def get_dashboard_metrics():
                     "recovered_count": 0,
                     "total_gmv": 0,
                     "recovered_gmv": 0,
-                    "channel_cost": 0.0,
+                    "channel_cost_paise": 0,
                 }
             class_data[cls]["total_count"] += 1
             class_data[cls]["total_gmv"] += record.amount
@@ -100,18 +133,53 @@ async def get_dashboard_metrics():
             for r in records
         ]
 
+        # Lift decomposition. Gross recovery flatters the system; only the
+        # difference against the untreated control arm is attributable.
+        treated = [r for r in records if r.arm == "treated"]
+        control = [r for r in records if r.arm == "control"]
+        treated_recovered = [r for r in treated if r.recovery_state == "RECOVERED"]
+        control_recovered = [r for r in control if r.recovery_state == "RECOVERED"]
+
+        treated_rate = len(treated_recovered) / len(treated) * 100 if treated else 0.0
+        control_rate = len(control_recovered) / len(control) * 100 if control else 0.0
+
+        head = ledger.get_head(db)
+
         return {
             "total_records": total_records,
             "total_gmv": total_gmv,
             "recovered_gmv": recovered_gmv,
             "recovery_rate": round(recovery_rate, 1),
-            "total_channel_cost": round(total_channel_cost, 2),
-            "net_roi": round(net_roi, 2),
-            "cost_per_recovery": round(cost_per_recovery, 2),
+            "total_channel_cost_paise": total_channel_cost_paise,
+            "total_channel_cost": total_channel_cost_paise / 100.0,
+            "net_roi_paise": net_roi_paise,
+            "net_roi": net_roi_paise / 100.0,
+            "cost_per_recovery_paise": cost_per_recovery_paise,
+            "cost_per_recovery": cost_per_recovery_paise / 100.0,
             "recovered_count": recovered_count,
             "failed_count": len(failed),
             "in_progress_count": len(in_progress),
             "class_breakdown": list(class_data.values()),
+            "lift": {
+                "treated_count": len(treated),
+                "control_count": len(control),
+                "treated_recovered": len(treated_recovered),
+                "control_recovered": len(control_recovered),
+                "treated_rate": round(treated_rate, 1),
+                "control_rate": round(control_rate, 1),
+                "lift_pp": round(treated_rate - control_rate, 1),
+                "merchant_margin_percent": MERCHANT_MARGIN_PERCENT,
+                # A batch this small cannot carry a causal claim; the demo
+                # shows mechanism, results/lift_analysis.md carries the number.
+                "sample_warning": (
+                    f"n={len(control)} controls - too small for a reliable "
+                    f"estimate. See results/lift_analysis.md."
+                ) if len(control) < 100 else None,
+            },
+            "ledger": {
+                "head_hash": head.entry_hash if head else None,
+                "entries": (head.sequence_no + 1) if head else 0,
+            },
             "records": records_list,
         }
     finally:

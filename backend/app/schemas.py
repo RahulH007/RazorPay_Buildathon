@@ -71,16 +71,16 @@ class LLMMetadata(BaseModel):
 class AuditEntryResponse(BaseModel):
     id: int
     payment_id: str
-    timestamp: datetime
+    timestamp_us: int
     action: str
     actor: str
     details: Optional[str] = None
-    cost_incurred_inr: float = 0.0
+    cost_paise: int = 0
     llm_model: Optional[str] = None
     llm_input_tokens: Optional[int] = None
     llm_output_tokens: Optional[int] = None
     llm_latency_ms: Optional[int] = None
-    llm_confidence: Optional[float] = None
+    llm_confidence_bp: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -142,7 +142,7 @@ class BatchRunResponse(BaseModel):
     recovered_count: int = 0
     total_gmv: int = 0
     recovered_gmv: int = 0
-    channel_cost: float = 0.0
+    channel_cost_paise: int = 0
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
 
@@ -158,7 +158,7 @@ class ClassBreakdown(BaseModel):
     recovered_count: int
     total_gmv: int
     recovered_gmv: int
-    channel_cost: float
+    channel_cost_paise: int
     recovery_rate: float
 
 
@@ -167,9 +167,9 @@ class DashboardMetrics(BaseModel):
     total_gmv: int = 0           # in paise
     recovered_gmv: int = 0       # in paise
     recovery_rate: float = 0.0   # percentage
-    total_channel_cost: float = 0.0  # INR
-    net_roi: float = 0.0         # INR (recovered_gmv_inr - channel_cost)
-    cost_per_recovery: float = 0.0   # INR
+    total_channel_cost_paise: int = 0
+    net_roi_paise: int = 0       # recovered_gmv_paise - channel_cost_paise
+    cost_per_recovery_paise: int = 0
     recovered_count: int = 0
     failed_count: int = 0
     in_progress_count: int = 0

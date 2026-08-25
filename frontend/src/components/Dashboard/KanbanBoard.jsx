@@ -3,7 +3,7 @@ import KanbanCard from './KanbanCard';
 
 const COLUMNS = [
   { key: 'INGESTED', label: 'Ingested', icon: Inbox, badgeBg: 'bg-slate-50 border-slate-200 text-slate-600', barColor: 'bg-slate-400' },
-  { key: 'DIAGNOSED', label: 'Diagnosed', icon: BrainCircuit, badgeBg: 'bg-blue-50 border-blue-200 text-[#2563EB]', barColor: 'bg-[#2563EB]' },
+  { key: 'DIAGNOSED', label: 'Diagnosed', icon: BrainCircuit, badgeBg: 'bg-blue-50 border-blue-200 text-[var(--rzp-blue-600)]', barColor: 'bg-[var(--rzp-blue-600)]' },
   { key: 'INTERVENING', label: 'Intervening', icon: Zap, badgeBg: 'bg-amber-50 border-amber-200 text-amber-600', barColor: 'bg-amber-500' },
   { key: 'RECOVERED', label: 'Recovered', icon: CircleCheck, badgeBg: 'bg-emerald-50 border-emerald-200 text-emerald-600', barColor: 'bg-emerald-500' },
   { key: 'FAILED_STOPPED', label: 'Aborted', icon: OctagonX, badgeBg: 'bg-rose-50 border-rose-200 text-rose-600', barColor: 'bg-rose-500' },
@@ -19,14 +19,14 @@ function KanbanColumn({ col, cards, onCardClick, processingId, selectedRecordId 
           <div className={`p-1.5 rounded-lg border ${col.badgeBg}`}>
             <Icon size={13} strokeWidth={2.2} />
           </div>
-          <span className="text-xs font-bold uppercase tracking-wider text-[#1B1F36]">
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--rzp-ink)]">
             {col.label}
           </span>
         </div>
         <span
           className={`rounded-full border px-2 py-0.5 font-mono text-[10px] font-bold ${
             cards.length > 0
-              ? 'border-blue-200 bg-blue-50 text-[#2563EB]'
+              ? 'border-blue-200 bg-blue-50 text-[var(--rzp-blue-600)]'
               : 'border-slate-200 bg-slate-50 text-[#94A3B8]'
           }`}
         >
@@ -76,11 +76,11 @@ export default function KanbanBoard({ records = [], onCardClick, processingId, s
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-[#1B1F36] flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#2563EB] animate-pulse" />
+          <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--rzp-ink)] flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[var(--rzp-blue-600)] animate-pulse" />
             Autonomous Recovery Pipeline
           </h2>
-          <span className="text-xs font-mono text-[#64748B]">
+          <span className="text-xs font-mono text-[var(--rzp-ink-muted)]">
             ({records.length} Total Records)
           </span>
         </div>

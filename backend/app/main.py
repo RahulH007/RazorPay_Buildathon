@@ -8,7 +8,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import engine, Base
+from app import ledger
+from app.database import engine, Base, SessionLocal
+from app.models import install_append_only_triggers
 from app.websocket_manager import manager
 
 
@@ -18,6 +20,25 @@ async def lifespan(app: FastAPI):
     # Create all tables on startup
     Base.metadata.create_all(bind=engine)
     print("[OK] Database tables created")
+
+    # Append-only triggers at the database level, so the ledger guarantee
+    # survives someone opening the .db file directly rather than using the ORM.
+    if install_append_only_triggers(engine):
+        print("[OK] Ledger append-only triggers installed")
+
+    # Report chain state at boot so a corrupted ledger is noticed immediately
+    # rather than at demo time.
+    db = SessionLocal()
+    try:
+        result = ledger.verify_chain(db)
+        if result.valid:
+            head = (result.head_hash or "-")[:16]
+            print(f"[OK] Ledger verified: {result.entries_checked} entries, head {head}...")
+        else:
+            print(f"[FAIL] LEDGER VERIFICATION FAILED: {result.reason}")
+    finally:
+        db.close()
+
     yield
     print("[STOP] RecoverOS shutting down")
 
@@ -59,9 +80,11 @@ async def websocket_endpoint(websocket: WebSocket):
 
 # --- Mount Route Modules ---
 from app.routes import webhooks, batch, recovery, metrics, audit  # noqa: E402
+from app.routes import ledger as ledger_routes  # noqa: E402
 
 app.include_router(webhooks.router, prefix="/api", tags=["Webhooks"])
 app.include_router(batch.router, prefix="/api", tags=["Batch Simulation"])
 app.include_router(recovery.router, prefix="/api", tags=["Recovery"])
 app.include_router(metrics.router, prefix="/api", tags=["Metrics"])
 app.include_router(audit.router, prefix="/api", tags=["Audit Trail"])
+app.include_router(ledger_routes.router, prefix="/api", tags=["Ledger"])

@@ -16,12 +16,12 @@ export default function RazorpayLogo({ className = 'h-7', showText = true, isLig
       {showText && (
         <div className="flex items-center leading-none font-sans">
           <span className={`text-[18px] font-black tracking-tight italic ${
-            isLight ? 'text-[#1B1F36]' : 'text-white'
+            isLight ? 'text-[var(--rzp-ink)]' : 'text-white'
           }`}>
             Razorpay
           </span>
           <span className={`text-[16px] font-extrabold tracking-tight ml-1.5 ${
-            isLight ? 'text-[#2563EB]' : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-300 to-teal-200'
+            isLight ? 'text-[var(--rzp-blue-600)]' : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-300 to-teal-200'
           }`}>
             Recovery
           </span>

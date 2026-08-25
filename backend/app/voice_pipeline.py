@@ -129,12 +129,25 @@ async def handle_dtmf_response(
         }
 
     elif dtmf_key == "9":
-        # Opt-out → immediate halt
+        # Opt-out -> registry first, then halt this payment.
+        # Order matters: the registry entry is what protects the customer's
+        # *other* payments, so it must be written even if the transition below
+        # is a no-op because this record is already terminal.
+        from app.consent import record_opt_out
+
+        record_opt_out(
+            db,
+            phone=record.customer_phone,
+            source="dtmf_9",
+            payment_id=record.payment_id,
+            channel="all",
+            batch_id=record.batch_id,
+        )
         log_audit(
             db, record,
             action="DTMF_OPT_OUT",
             actor="customer",
-            details="Customer pressed 9 (Opt-Out) — immediate halt",
+            details="Customer pressed 9 (Opt-Out) — consent withdrawn for all channels",
         )
         if record.recovery_state not in ("RECOVERED", "FAILED_STOPPED"):
             await transition_state(
@@ -146,6 +159,7 @@ async def handle_dtmf_response(
         return {
             "response": "opt_out",
             "action": "All recovery actions halted — opt-out recorded",
+            "scope": "Suppression applies to every future payment from this contact",
         }
 
     else:

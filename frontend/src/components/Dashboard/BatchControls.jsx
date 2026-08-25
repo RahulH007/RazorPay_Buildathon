@@ -25,8 +25,8 @@ export default function BatchControls({
         disabled={isRunning}
         className={`group flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-white text-sm font-bold shadow-lg transition-all duration-200 cursor-pointer ${
           isRunning
-            ? 'cursor-not-allowed bg-[#2563EB]/60 shadow-blue-400/10'
-            : 'bg-[#2563EB] hover:bg-[#1D4ED8] shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98]'
+            ? 'cursor-not-allowed bg-[var(--rzp-blue-600)]/60 shadow-blue-400/10'
+            : 'bg-[var(--rzp-blue-600)] hover:bg-[var(--rzp-blue-700)] shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98]'
         }`}
       >
         {isRunning ? (
@@ -45,7 +45,7 @@ export default function BatchControls({
       {/* Secondary Ghost Button */}
       <button
         onClick={onInspect}
-        className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-[#334155] hover:text-[#1B1F36] text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 cursor-pointer shadow-xs"
+        className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-[var(--rzp-ink)] hover:text-[var(--rzp-ink)] text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 cursor-pointer shadow-xs"
       >
         <ScanSearch size={16} />
         <span>Explore Architecture</span>
@@ -56,19 +56,19 @@ export default function BatchControls({
         <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-blue-50 border border-blue-200">
           <div className="h-2 w-32 overflow-hidden rounded-full bg-blue-100">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-[#2563EB] via-blue-400 to-cyan-400 transition-all duration-300 ease-out"
+              className="h-full rounded-full bg-gradient-to-r from-[var(--rzp-blue-600)] via-blue-400 to-cyan-400 transition-all duration-300 ease-out"
               style={{ width: `${pct}%` }}
             />
           </div>
-          <span className="font-mono text-xs font-bold text-[#2563EB]">
+          <span className="font-mono text-xs font-bold text-[var(--rzp-blue-600)]">
             {pct.toFixed(0)}%
           </span>
           {current?.payment_id && (
             <span
-              className="hidden sm:inline-flex items-center gap-1.5 max-w-[180px] truncate text-[11px] font-mono text-[#334155]"
+              className="hidden sm:inline-flex items-center gap-1.5 max-w-[180px] truncate text-[11px] font-mono text-[var(--rzp-ink)]"
               title={current.payment_id}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB] animate-ping" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--rzp-blue-600)] animate-ping" />
               {current.customer_name || current.payment_id}
             </span>
           )}

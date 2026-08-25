@@ -9,7 +9,7 @@ import {
 import { formatCurrency, truncateId } from '../../utils/formatters';
 
 const BADGE = {
-  TRANSIENT_TECHNICAL: { cls: 'bg-blue-50 text-[#2563EB] border-blue-200', bar: 'bg-[#2563EB]', label: 'Transient' },
+  TRANSIENT_TECHNICAL: { cls: 'bg-blue-50 text-[var(--rzp-blue-600)] border-blue-200', bar: 'bg-[var(--rzp-blue-600)]', label: 'Transient' },
   AUTH_FRICTION: { cls: 'bg-amber-50 text-amber-700 border-amber-200', bar: 'bg-amber-500', label: 'Auth Friction' },
   MANDATE_BALANCE: { cls: 'bg-violet-50 text-violet-700 border-violet-200', bar: 'bg-violet-500', label: 'Mandate' },
   B2B_RECEIVABLE: { cls: 'bg-teal-50 text-teal-700 border-teal-200', bar: 'bg-teal-500', label: 'B2B Invoice' },
@@ -25,7 +25,7 @@ const CHANNEL_ICON = {
 
 const STATE_ACCENT = {
   INGESTED: 'bg-slate-400',
-  DIAGNOSED: 'bg-[#2563EB]',
+  DIAGNOSED: 'bg-[var(--rzp-blue-600)]',
   INTERVENING: 'bg-amber-500',
   RECOVERED: 'bg-emerald-500',
   FAILED_STOPPED: 'bg-rose-500',
@@ -67,21 +67,21 @@ export default function KanbanCard({ record, onClick, isProcessing, isSelected }
 
       {/* Processing Pulse */}
       {isProcessing && (
-        <span className="absolute right-2 top-2 h-2 w-2 animate-ping rounded-full bg-[#2563EB]" />
+        <span className="absolute right-2 top-2 h-2 w-2 animate-ping rounded-full bg-[var(--rzp-blue-600)]" />
       )}
 
       {/* Top row: ID + Amount */}
       <div className="flex items-center justify-between gap-2 pl-1.5">
-        <span className="truncate font-mono text-[10px] text-[#94A3B8] group-hover:text-[#64748B]">
+        <span className="truncate font-mono text-[10px] text-[#94A3B8] group-hover:text-[var(--rzp-ink-muted)]">
           {truncateId(record.payment_id)}
         </span>
-        <span className="shrink-0 font-mono text-xs font-bold text-[#1B1F36] tracking-tight">
+        <span className="shrink-0 font-mono text-xs font-bold text-[var(--rzp-ink)] tracking-tight">
           {formatCurrency(record.amount)}
         </span>
       </div>
 
       {/* Customer Name */}
-      <div className="mt-1 truncate pl-1.5 text-xs font-medium text-[#334155]">
+      <div className="mt-1 truncate pl-1.5 text-xs font-medium text-[var(--rzp-ink)]">
         {record.customer_name}
       </div>
 
@@ -100,7 +100,7 @@ export default function KanbanCard({ record, onClick, isProcessing, isSelected }
         )}
 
         {ChannelIcon && (
-          <div className="p-1 rounded bg-blue-50 border border-blue-200 text-[#2563EB]" title={record.recovery_channel}>
+          <div className="p-1 rounded bg-blue-50 border border-blue-200 text-[var(--rzp-blue-600)]" title={record.recovery_channel}>
             <ChannelIcon size={12} strokeWidth={2.2} />
           </div>
         )}
