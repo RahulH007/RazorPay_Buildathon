@@ -11,12 +11,15 @@ unreachable and the CAC ceiling never bound.
 Every decision here - including every refusal - returns a reason code and is
 written to the ledger. Restraint is an output of this system, not an absence
 of one, and it should be as auditable as a recovery.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -49,6 +52,7 @@ class ReasonCode:
     QUIET_HOURS_DEFERRED = "QUIET_HOURS_DEFERRED"
     NEGATIVE_EXPECTED_VALUE = "NEGATIVE_EXPECTED_VALUE"
     HOLDOUT_CONTROL = "HOLDOUT_CONTROL"
+    PROMISE_TO_PAY_PENDING = "PROMISE_TO_PAY_PENDING"
 
 
 # Which channel each step of the escalation uses, per failure class.
@@ -163,6 +167,28 @@ def decide_next_action(
             ),
             attempt_number=attempts,
         )
+
+    # 2b. A stated promise to pay defers, it does not stop. Contacting someone
+    #     who just told us a date is the fastest way to be marked as spam, and
+    #     the attempt resumes on its own once the date passes.
+    if record.promise_to_pay_at is not None:
+        moment = now or datetime.now(timezone.utc)
+        promised = record.promise_to_pay_at
+        if promised.tzinfo is None:
+            promised = promised.replace(tzinfo=timezone.utc)
+        if moment.tzinfo is None:
+            moment = moment.replace(tzinfo=timezone.utc)
+        if promised > moment:
+            return PolicyDecision(
+                should_act=False,
+                reason_code=ReasonCode.PROMISE_TO_PAY_PENDING,
+                reason=(
+                    f"Customer stated they will pay by "
+                    f"{promised.date().isoformat()}. Deferring until then; "
+                    f"this is a pause, not a stop."
+                ),
+                attempt_number=attempts,
+            )
 
     ladder = ATTEMPT_LADDER.get(failure_class, [])
     if not ladder:

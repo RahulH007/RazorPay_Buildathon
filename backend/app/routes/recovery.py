@@ -5,6 +5,9 @@ POST /api/recovery/{payment_id}/opt-out — Process customer opt-out
 POST /api/recovery/{payment_id}/settle — Simulate settlement (for phone simulator)
 POST /api/recovery/{payment_id}/dtmf — Handle voice DTMF response
 GET /api/voice/{payment_id} — Get voice script
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 from fastapi import APIRouter, HTTPException
@@ -17,6 +20,7 @@ from app.state_machine import transition_state, log_audit
 from app.schemas import PaymentFailureResponse
 from app.voice_pipeline import handle_dtmf_response
 from app.llm_agent import generate_hinglish_script
+from app.inbound import handle_reply
 
 router = APIRouter()
 
@@ -138,6 +142,32 @@ async def opt_out_record(payment_id: str):
         db.close()
 
 
+@router.post("/recovery/{payment_id}/reply")
+async def receive_customer_reply(payment_id: str, payload: dict):
+    """
+    Accept an inbound customer message (WhatsApp reply, SMS) and act on it.
+
+    This is the path the WhatsApp simulator drives. In live mode the same
+    handler serves a provider webhook.
+    """
+    message = (payload or {}).get("message", "")
+    if not message.strip():
+        raise HTTPException(status_code=400, detail="message is required")
+
+    db = SessionLocal()
+    try:
+        record = db.query(PaymentFailureRecord).filter(
+            PaymentFailureRecord.payment_id == payment_id
+        ).first()
+        if not record:
+            raise HTTPException(status_code=404, detail=f"Record not found: {payment_id}")
+
+        result = await handle_reply(db, record, message)
+        return {"payment_id": payment_id, **result}
+    finally:
+        db.close()
+
+
 @router.post("/recovery/{payment_id}/settle")
 async def simulate_settlement(payment_id: str):
     """
@@ -222,7 +252,7 @@ async def get_voice_script(payment_id: str):
         if not record:
             raise HTTPException(status_code=404, detail=f"Record not found: {payment_id}")
 
-        script = await generate_hinglish_script(record)
+        script, _metadata, _rejection = await generate_hinglish_script(record)
 
         return {
             "payment_id": payment_id,

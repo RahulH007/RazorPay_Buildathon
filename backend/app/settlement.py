@@ -2,6 +2,9 @@
 RecoverOS Settlement Verification
 Matches incoming payment.captured webhooks to recovery records.
 Handles settlement timeouts for unresolved records.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 from datetime import datetime, timezone, timedelta

@@ -5,6 +5,9 @@ FSM managing payment recovery lifecycle: INGESTED → DIAGNOSED → INTERVENING 
 Every transition and every intermediate action is written through the ledger
 (app/ledger.py), so the audit trail is a tamper-evident hash chain rather than
 an ordinary table. Callers keep the same signatures they always had.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 from datetime import datetime, timezone

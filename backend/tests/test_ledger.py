@@ -4,6 +4,9 @@ Ledger tests.
 The golden-fixture test is the important one: it pins the canonical preimage
 byte-for-byte. Any change to field order, encoders, or PREIMAGE_VERSION fails
 here loudly, rather than silently invalidating every hash already written.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 import hashlib

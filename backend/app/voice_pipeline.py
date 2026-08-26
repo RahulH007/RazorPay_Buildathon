@@ -1,12 +1,15 @@
 """
 RecoverOS Voice Pipeline
 Hinglish script generation → TTS synthesis → audio delivery.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 import os
 import uuid
 import hashlib
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -16,23 +19,49 @@ from app.state_machine import log_audit
 from app.config import SARVAM_API_KEY, DEMO_MODE
 
 
+def next_salary_date(now: datetime | None = None) -> date:
+    """
+    The next 1st of the month.
+
+    Salary credit in India clusters on the 1st, which is why the delay keypress
+    exists at all. Deterministic by construction so a demo run reproduces.
+    """
+    moment = now or datetime.now(timezone.utc)
+    if moment.month == 12:
+        return date(moment.year + 1, 1, 1)
+    return date(moment.year, moment.month + 1, 1)
+
+
 async def generate_voice_audio(db: Session, record: PaymentFailureRecord) -> str:
     """
     Full pipeline: LLM script → Sarvam TTS → audio URL.
     In demo mode, returns a simulated audio URL.
     """
     # 1. Generate Hinglish script via Gemini
-    script = await generate_hinglish_script(record)
+    script, llm_metadata, rejection = await generate_hinglish_script(record)
 
-    # 2. Log script generation
+    # 2. A rejected script is ledgered rather than swallowed: the guard is only
+    #    worth having if a reviewer can see it fire.
+    if rejection:
+        log_audit(
+            db, record,
+            action="LLM_OUTPUT_REJECTED",
+            actor="policy_engine",
+            details=f"Generated voice script rejected, template used instead. "
+                    f"Reason: {rejection}",
+            llm_metadata=llm_metadata or None,
+        )
+
+    # 3. Log script generation
     log_audit(
         db, record,
         action="VOICE_SCRIPT_GENERATED",
         actor="llm_agent",
         details=f"Hinglish script: {script[:200]}...",
+        llm_metadata=llm_metadata or None,
     )
 
-    # 3. Synthesize via Sarvam AI TTS or mock
+    # 4. Synthesize via Sarvam AI TTS or mock
     if not DEMO_MODE and SARVAM_API_KEY and "XXXX" not in SARVAM_API_KEY:
         audio_url = await sarvam_tts(script)
     else:
@@ -112,15 +141,19 @@ async def handle_dtmf_response(
         }
 
     elif dtmf_key == "2":
-        # Delay → extract P2P date
-        from app.llm_agent import extract_p2p_date
-        p2p_date = await extract_p2p_date(record, "next salary date")
+        # Delay -> deterministic deferral.
+        #
+        # A keypress is a structured signal, not natural language: there is
+        # nothing here for a model to interpret. This previously asked Gemini
+        # to extract a date from the constant string "next salary date", which
+        # spent a call to learn what the keypress already said.
+        p2p_date = next_salary_date().isoformat()
 
         log_audit(
             db, record,
             action="DTMF_DELAY_P2P",
             actor="customer",
-            details=f"Customer pressed 2 (Delay) — P2P date: {p2p_date or 'to be confirmed'}",
+            details=f"Customer pressed 2 (Delay) — P2P date: {p2p_date}",
         )
         return {
             "response": "delay",

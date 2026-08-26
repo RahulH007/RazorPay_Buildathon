@@ -1,10 +1,15 @@
+"""
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
+"""
+
 import asyncio
 import random
 
 import pytest
 
 import app.recovery_simulator as simulator
-from app.models import BatchRun, PaymentFailureRecord
+from app.models import AuditTrailEntry, BatchRun, PaymentFailureRecord
 
 
 @pytest.mark.asyncio
@@ -48,5 +53,15 @@ async def test_batch_simulation_marks_hard_declines_without_recovery(db_session,
         PaymentFailureRecord.failure_class == "HARD_DECLINE",
     ).all()
 
-    assert len(hard_declines) == 4
+    # The count is not the invariant - the slow path may legitimately diagnose
+    # an unmapped error as a hard decline, and pinning a number here would make
+    # the test assert what the model said rather than what the system must do.
+    # What must hold: every hard decline stops, and none of them costs money.
+    assert len(hard_declines) >= 4
     assert all(record.recovery_state == "FAILED_STOPPED" for record in hard_declines)
+
+    spent = db_session.query(AuditTrailEntry).filter(
+        AuditTrailEntry.payment_id.in_([r.payment_id for r in hard_declines]),
+        AuditTrailEntry.cost_paise > 0,
+    ).all()
+    assert spent == [], f"Hard declines must never cost money, got {spent}"

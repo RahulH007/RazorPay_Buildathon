@@ -4,6 +4,9 @@ Verify the RecoverOS ledger from the command line.
     python -m app.tools.verify_ledger
 
 Exits 0 when the chain is intact, 1 when it is not, so it can gate CI.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 import os
@@ -18,6 +21,7 @@ if not os.environ.get("DATABASE_URL"):
 import sys
 
 from app import ledger
+from app import __about__
 from app.database import SessionLocal, engine
 from app.models import AuditTrailEntry
 from sqlalchemy import func
@@ -28,6 +32,7 @@ def main() -> int:
     try:
         print("=" * 68)
         print("  RecoverOS - Ledger Verification")
+        print(f"  {__about__.banner()}")
         print("=" * 68)
         print(f"  Database        : {engine.url}")
         print(f"  Preimage version: {ledger.PREIMAGE_VERSION}")

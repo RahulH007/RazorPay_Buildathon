@@ -10,6 +10,9 @@ contact, and every outbound checks it.
 Phone numbers are stored only as a SHA-256 hash. The registry never needs the
 raw number — it only ever answers "is this contact suppressed?" — so it should
 not hold one.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 from __future__ import annotations

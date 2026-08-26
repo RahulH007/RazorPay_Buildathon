@@ -77,9 +77,10 @@ Razorpay_UI_SILL.md
 SKILL.md
 task.md
 Final_Plan.md
+Final_Plan.local.md
 
 # ---------------------------------------------------------------
-# Test 
+# Test artefacts. The suite itself is part of the deliverable - the
+# README asks reviewers to run it - so only generated output is ignored.
 # ---------------------------------------------------------------
 test_results/
-backend/tests

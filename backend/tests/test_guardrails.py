@@ -1,3 +1,8 @@
+"""
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
+"""
+
 from app.config import MAX_RETRIES
 from app.guardrails import (
     check_cac_ceiling,

@@ -7,6 +7,9 @@ would have done without us. A counterfactual hidden inside code is not
 evidence; one sitting in the input data is.
 
 Run once:  python -m app.tools.seed_behavior
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 import json

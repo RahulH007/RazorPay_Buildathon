@@ -5,6 +5,9 @@ The load-bearing test is cross-payment suppression: opting out on one payment
 must silence the contact's *other* payments. A per-payment flag passes every
 other test in this file and still fails that one, which is exactly why the
 original implementation looked correct.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 from datetime import datetime, timezone

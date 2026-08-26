@@ -18,6 +18,9 @@ That makes two things possible which a coin flip cannot support:
 
   * **Attribution.** Because "would they have paid anyway?" is defined data, a
     holdout group has a meaning. Lift is measurable rather than asserted.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 from __future__ import annotations

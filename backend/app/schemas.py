@@ -1,6 +1,9 @@
 """
 RecoverOS Pydantic Schemas
 Request/response models, enums, and JSON schemas for the API layer.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 from datetime import datetime
@@ -196,3 +199,17 @@ class ParsedIntent(BaseModel):
     sentiment: str = "neutral"  # positive, neutral, negative
     requires_human: bool = False
     reasoning: str = ""
+
+
+class FailureDiagnosis(BaseModel):
+    """
+    Structured output from the classifier's slow path.
+
+    `suggested_action` is recorded and never executed. The policy engine reads
+    `root_cause_class` and nothing else from this object - which is what keeps
+    the spend decision auditable in code rather than delegated to a prompt.
+    """
+    root_cause_class: str
+    technical_explanation: str
+    suggested_action: str
+    confidence: float = Field(ge=0.0, le=1.0)

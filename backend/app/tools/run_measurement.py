@@ -14,6 +14,9 @@ project's whole claim is that we do not overstate.
 So the demo batch shows the mechanism, and this shows the number. Runs
 headless with no database: the policy ladder and the outcome engine are pure
 functions of the record, which is what makes them measurable this way.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 import argparse

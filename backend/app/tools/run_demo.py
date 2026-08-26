@@ -14,6 +14,9 @@ re-running into an existing database would let the previous run's attempts
 count against the new one and trip the caps immediately. The receipt therefore
 builds a throwaway `recoveros_demo.db` from scratch each time. The API's own
 database is never touched.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 import os
@@ -27,7 +30,7 @@ os.environ["DATABASE_URL"] = f"sqlite:///{DEMO_DB.as_posix()}"
 
 import asyncio  # noqa: E402
 
-from app import ledger  # noqa: E402
+from app import ledger, __about__  # noqa: E402
 from app.config import (  # noqa: E402
     CAC_CEILING_PERCENT,
     HOLDOUT_PERCENT,
@@ -105,8 +108,10 @@ async def run() -> tuple[dict, ledger.VerificationResult]:
     simulator.asyncio.sleep = no_sleep
     db = SessionLocal()
     try:
+        from app.routes.llm import build_activity
+
         result = await simulator.run_batch_simulation(db, f"demo_{RECOVEROS_SEED}")
-        return result, ledger.verify_chain(db)
+        return result, ledger.verify_chain(db), build_activity(db)
     finally:
         simulator.asyncio.sleep = original_sleep
         db.close()
@@ -115,7 +120,7 @@ async def run() -> tuple[dict, ledger.VerificationResult]:
 def main() -> int:
     reset_database()
     install_virtual_clock()
-    result, verification = asyncio.run(run())
+    result, verification, activity = asyncio.run(run())
 
     treated = result["treated_count"]
     control = result["control_count"]
@@ -127,6 +132,7 @@ def main() -> int:
 
     print(RULE)
     print("  RecoverOS - Demo Batch Receipt")
+    print(f"  {__about__.banner()}")
     print(RULE)
     print(f"  Seed                : {result['seed']}  (deterministic)")
     print(f"  Records             : {result['total_records']}")
@@ -154,6 +160,21 @@ def main() -> int:
         if code not in REASON_ORDER:
             print(f"    {count:>3}  {code}")
     print(THIN)
+    print("  AI ACTIVITY")
+    split = activity["classification_split"]
+    print(f"    model calls       : {activity['total_calls']}")
+    print(f"    classified by     : {split['rule_engine']} rule engine / "
+          f"{split['llm_agent']} llm agent")
+    print(f"    tokens in / out   : {activity['total_input_tokens']} / "
+          f"{activity['total_output_tokens']}")
+    print(f"    mean latency      : {activity['mean_latency_ms']} ms")
+    print(f"    copy rejected     : {activity['rejections']}")
+    for action, count in sorted(activity["by_action"].items()):
+        print(f"      {count:>3}  {action}")
+    print()
+    print("    Responses are replayed from backend/data/llm_cache.json, recorded")
+    print("    against live Gemini. That is what lets this run reproduce exactly.")
+    print(THIN)
     print("  LEDGER")
     print(f"    entries           : {verification.entries_checked}")
     status = "VALID" if verification.valid else f"BROKEN - {verification.reason}"
@@ -163,6 +184,9 @@ def main() -> int:
     print("  Run this again - every number above, head hash included, repeats.")
     print("  Verify the chain     : python -m app.tools.verify_ledger")
     print("  Break it on purpose  : python -m app.tools.tamper_demo")
+    print(THIN)
+    print(f"  {__about__.NOTICE}")
+    print(f"  {__about__.PROJECT_URL}")
     print(RULE)
 
     return 0 if verification.valid else 1

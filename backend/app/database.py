@@ -1,6 +1,9 @@
 """
 RecoverOS Database Module
 SQLAlchemy engine, session factory, and declarative base.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 from sqlalchemy import create_engine, event

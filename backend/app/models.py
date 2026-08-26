@@ -5,6 +5,9 @@ SQLAlchemy models for PaymentFailureRecord, AuditTrailEntry, and BatchRun.
 Money is stored as integer paise throughout, and audit timestamps as integer
 microseconds since the Unix epoch. Both choices exist so that ledger hashes are
 byte-reproducible across machines and language runtimes — see app/ledger.py.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 from datetime import datetime, timezone
@@ -57,6 +60,11 @@ class PaymentFailureRecord(Base):
     # record was actually measured in cannot drift if the assignment rule
     # changes later.
     arm = Column(String(10), nullable=True, index=True)
+
+    # A customer-stated intent to pay by a given date. Set from the inbound
+    # reply path; read by the policy engine as a deferral, never as a promise
+    # we trust - the attempt resumes automatically once the date passes.
+    promise_to_pay_at = Column(DateTime, nullable=True)
 
     # Timestamps
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

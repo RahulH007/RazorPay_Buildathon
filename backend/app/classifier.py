@@ -2,6 +2,9 @@
 RecoverOS Classifier
 Rule Engine (Fast Path) for deterministic error code classification
 + LLM router (Slow Path) for ambiguous cases.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 from sqlalchemy.orm import Session
@@ -82,44 +85,58 @@ async def classify(db: Session, record: PaymentFailureRecord) -> FailureClass:
 
 async def llm_classify(db: Session, record: PaymentFailureRecord):
     """
-    Slow Path: Use LLM for ambiguous failure reasons.
-    Falls back to HARD_DECLINE with escalation if confidence is too low.
+    Slow Path: the rule engine has no entry for this error, so ask the model
+    what actually went wrong.
+
+    Previously this called parse_customer_reply - a prompt written to read
+    customer messages - with a bank error string, then mapped reply intents
+    onto failure classes. An unrecognised error code was therefore usually
+    killed as a hard decline by a function that was never asked the right
+    question.
     """
+    from app.llm_agent import diagnose_failure
+
     try:
-        from app.llm_agent import parse_customer_reply
-
-        result = await parse_customer_reply(record, record.error_description or record.error_reason)
-
-        if result.confidence < CONFIDENCE_THRESHOLD:
-            # Low confidence → escalate to human review
-            log_audit(
-                db, record,
-                action="ESCALATED_TO_HUMAN",
-                actor="llm_agent",
-                details=f"Confidence {result.confidence:.2f} below threshold {CONFIDENCE_THRESHOLD}",
-                llm_metadata={
-                    "model": "gemini-2.0-flash",
-                    "confidence": result.confidence,
-                },
-            )
-            return FailureClass.HARD_DECLINE, "llm_agent", f"Low confidence ({result.confidence:.2f}) — escalated to human"
-
-        # Map LLM intent to failure class
-        failure_class = map_intent_to_class(result.intent)
-        return failure_class, "llm_agent", f"LLM classified as {failure_class.value} (confidence: {result.confidence:.2f})"
-
+        diagnosis, metadata = await diagnose_failure(record)
     except Exception as e:
-        # If LLM fails, treat as hard decline for safety
-        return FailureClass.HARD_DECLINE, "system", f"LLM classification failed: {str(e)}"
+        # A model or cache failure must never silently reclassify a payment.
+        log_audit(
+            db, record,
+            action="ESCALATED_TO_HUMAN",
+            actor="system",
+            details=f"Diagnosis unavailable ({type(e).__name__}: {str(e)[:200]}). "
+                    f"No automated action taken on this record.",
+        )
+        return FailureClass.HARD_DECLINE, "system", f"Diagnosis unavailable: {type(e).__name__}"
 
+    if diagnosis.confidence < CONFIDENCE_THRESHOLD:
+        log_audit(
+            db, record,
+            action="ESCALATED_TO_HUMAN",
+            actor="llm_agent",
+            details=f"Confidence {diagnosis.confidence:.2f} below threshold "
+                    f"{CONFIDENCE_THRESHOLD}. Model read: "
+                    f"{diagnosis.technical_explanation}",
+            llm_metadata=metadata,
+        )
+        return (
+            FailureClass.HARD_DECLINE,
+            "llm_agent",
+            f"Low confidence ({diagnosis.confidence:.2f}) - escalated to human",
+        )
 
-def map_intent_to_class(intent: str) -> FailureClass:
-    """Map an LLM-parsed intent to a failure class."""
-    INTENT_MAP = {
-        "will_pay": FailureClass.AUTH_FRICTION,
-        "dispute": FailureClass.HARD_DECLINE,
-        "opt_out": FailureClass.HARD_DECLINE,
-        "request_delay": FailureClass.MANDATE_BALANCE,
-        "unclear": FailureClass.HARD_DECLINE,
-    }
-    return INTENT_MAP.get(intent, FailureClass.HARD_DECLINE)
+    log_audit(
+        db, record,
+        action="FAILURE_DIAGNOSED_LLM",
+        actor="llm_agent",
+        details=f"{diagnosis.technical_explanation} "
+                f"Suggested action (recorded, not executed): {diagnosis.suggested_action}",
+        llm_metadata=metadata,
+    )
+
+    failure_class = FailureClass(diagnosis.root_cause_class)
+    return (
+        failure_class,
+        "llm_agent",
+        f"Diagnosed as {failure_class.value} (confidence {diagnosis.confidence:.2f})",
+    )

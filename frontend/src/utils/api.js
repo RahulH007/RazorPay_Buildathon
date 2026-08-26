@@ -29,10 +29,17 @@ export const api = {
   getRecovery: (paymentId) => apiFetch(`/api/recovery/${paymentId}`),
   optOut: (paymentId) => apiFetch(`/api/recovery/${paymentId}/opt-out`, { method: 'POST' }),
   settle: (paymentId) => apiFetch(`/api/recovery/${paymentId}/settle`, { method: 'POST' }),
+  sendReply: (paymentId, message) => apiFetch(`/api/recovery/${paymentId}/reply`, {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  }),
   sendDTMF: (paymentId, key) => apiFetch(`/api/recovery/${paymentId}/dtmf?key=${key}`, { method: 'POST' }),
 
   // Audit
   getAudit: (paymentId) => apiFetch(`/api/audit/${paymentId}`),
+
+  // LLM activity
+  getLlmActivity: () => apiFetch('/api/llm/activity'),
 
   // Voice
   getVoiceScript: (paymentId) => apiFetch(`/api/voice/${paymentId}`),

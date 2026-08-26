@@ -2,6 +2,9 @@
 RecoverOS Batch Routes
 POST /api/batch/run — Trigger batch simulation
 GET /api/batch/{batch_id}/status — Live batch metrics
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 import uuid

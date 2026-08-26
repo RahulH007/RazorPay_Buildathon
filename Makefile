@@ -7,7 +7,7 @@
 PY ?= venv/Scripts/python.exe
 BACKEND := backend
 
-.PHONY: help install demo verify-ledger tamper-demo measure test api web clean
+.PHONY: help install demo verify-ledger tamper-demo measure test api web clean refresh-llm-cache llm-activity
 
 help:
 	@echo "RecoverOS"
@@ -17,6 +17,8 @@ help:
 	@echo "  make verify-ledger  Walk the hash chain; exits non-zero if broken."
 	@echo "  make tamper-demo    Edit a cost in the database and watch it get caught."
 	@echo "  make measure        Incremental-lift measurement with a 95% CI."
+	@echo "  make llm-activity   What the model did, from the ledger (API must be running)."
+	@echo "  make refresh-llm-cache  Re-record Gemini responses. Needs GEMINI_API_KEY."
 	@echo "  make test           Full test suite."
 	@echo "  make api            Run the API on :8000"
 	@echo "  make web            Run the dashboard on :5173"
@@ -38,6 +40,12 @@ measure:
 
 test:
 	cd $(BACKEND) && ../$(PY) -m pytest tests/ -q
+
+refresh-llm-cache:
+	cd $(BACKEND) && ../$(PY) -m app.tools.refresh_llm_cache $(ARGS)
+
+llm-activity:
+	curl -s http://localhost:8000/api/llm/activity
 
 api:
 	cd $(BACKEND) && ../$(PY) -m uvicorn app.main:app --port 8000

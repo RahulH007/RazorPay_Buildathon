@@ -1,6 +1,9 @@
 """
 RecoverOS Webhook Routes
 POST /api/webhooks/razorpay — Razorpay webhook ingestion with HMAC-SHA256 verification.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 import hmac

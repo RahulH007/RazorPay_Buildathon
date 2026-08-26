@@ -1,3 +1,8 @@
+"""
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
+"""
+
 import pytest
 
 from app.settlement import handle_invoice_paid, handle_payment_captured

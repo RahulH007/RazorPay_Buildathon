@@ -2,6 +2,9 @@
 RecoverOS Recovery Actions
 Channel-specific recovery actions: silent retry, WhatsApp link, mandate resequence,
 voice recovery, and hard decline logging.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 import uuid
@@ -13,6 +16,7 @@ from app.models import PaymentFailureRecord
 from app.schemas import FailureClass
 from app.state_machine import transition_state, log_audit
 from app.consent import is_suppressed
+from app.llm_agent import generate_whatsapp_message
 from app.policy import ReasonCode, decide_next_action
 from app.config import CHANNEL_COSTS_PAISE, RECOVERY_CHANNELS, DEMO_MODE, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET
 
@@ -117,12 +121,31 @@ async def send_whatsapp_link(db: Session, record: PaymentFailureRecord) -> dict:
         except Exception as e:
             result["error"] = str(e)
 
+    message_text, llm_metadata, rejection = await generate_whatsapp_message(
+        record, result["link_url"]
+    )
+    result["message"] = message_text
+
+    if rejection:
+        # A rejected message is ledgered rather than swallowed: the guard is
+        # only worth having if a reviewer can see it fire.
+        log_audit(
+            db, record,
+            action="LLM_OUTPUT_REJECTED",
+            actor="policy_engine",
+            details=f"Generated message rejected, template sent instead. "
+                    f"Reason: {rejection}",
+            llm_metadata=llm_metadata or None,
+        )
+
     log_audit(
         db, record,
         action="WHATSAPP_LINK_SENT",
         actor="system",
-        details=f"WhatsApp payment link sent to {record.customer_phone}: {result['link_url']}",
+        details=f"WhatsApp payment link sent to {record.customer_phone}: "
+                f"{result['link_url']} | message: {message_text}",
         cost_paise=CHANNEL_COSTS_PAISE["AUTH_FRICTION"],
+        llm_metadata=llm_metadata or None,
     )
 
     return result
@@ -295,12 +318,14 @@ async def execute_recovery(
             cost_paise=0,
         )
 
-        # Two refusals leave the record open rather than closing it:
-        #   QUIET_HOURS_DEFERRED - the call still has to be placed later
-        #   HOLDOUT_CONTROL      - the control arm is observed, not abandoned
+        # Three refusals leave the record open rather than closing it:
+        #   QUIET_HOURS_DEFERRED   - the call still has to be placed later
+        #   HOLDOUT_CONTROL        - the control arm is observed, not abandoned
+        #   PROMISE_TO_PAY_PENDING - the customer asked for time, not to stop
         terminal = decision.reason_code not in (
             ReasonCode.QUIET_HOURS_DEFERRED,
             ReasonCode.HOLDOUT_CONTROL,
+            ReasonCode.PROMISE_TO_PAY_PENDING,
         )
         if terminal and record.recovery_state not in ("RECOVERED", "FAILED_STOPPED"):
             await transition_state(

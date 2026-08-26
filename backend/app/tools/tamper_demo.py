@@ -9,6 +9,9 @@ the SQLite file directly, outside the ORM — then re-verifies.
 
 It restores the original value afterwards so the demo can be run repeatedly.
 Nothing here is part of the application; it exists to prove a claim.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 import os
@@ -25,6 +28,7 @@ import sys
 from pathlib import Path
 
 from app import ledger
+from app import __about__
 from app.database import SessionLocal, engine
 from app.models import (
     AuditTrailEntry,
@@ -67,6 +71,7 @@ def main() -> int:
 
     print("=" * 68)
     print("  RecoverOS - Tamper Detection Demo")
+    print(f"  {__about__.banner()}")
     print("=" * 68)
     print(f"  Chain before : VALID, {before.entries_checked} entries")
     print(f"  Head hash    : {before.head_hash}")
@@ -140,6 +145,8 @@ def main() -> int:
     print("  Note: the tamper only succeeded because the triggers were dropped")
     print("  first. Without that, SQLite itself rejects the UPDATE - and even")
     print("  with full file access, the edit is still detected by the hash.")
+    _rule()
+    print(f"  {__about__.NOTICE}")
     print("=" * 68)
     return exit_code
 

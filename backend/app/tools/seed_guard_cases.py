@@ -7,6 +7,9 @@ appears in a normal demo run, with the arithmetic chosen so each one fires for
 the reason it claims.
 
 Run once:  python -m app.tools.seed_guard_cases
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 import json

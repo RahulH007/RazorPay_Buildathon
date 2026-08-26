@@ -5,15 +5,18 @@
 ### A revenue recovery agent that can prove what it did, what it spent, and why it stopped.
 
 [![Track](https://img.shields.io/badge/Razorpay%20Buildathon-Track%2003-2B6DEF?style=flat-square)](#)
-[![Tests](https://img.shields.io/badge/tests-92%20passing-12B76A?style=flat-square)](#tests)
+[![Tests](https://img.shields.io/badge/tests-133%20passing-12B76A?style=flat-square)](#tests)
 [![Deterministic](https://img.shields.io/badge/runs-byte--reproducible-12B76A?style=flat-square)](#verify-every-claim-in-60-seconds)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](#)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)](#)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](#)
+[![Author](https://img.shields.io/badge/built%20by-Rahul%20Hongekar-162F56?style=flat-square)](https://github.com/RahulH007)
 
 <img src="docs/screenshots/hero.jpg" alt="RecoverOS dashboard" width="100%" />
 
-**[Verify the claims](#verify-every-claim-in-60-seconds)** · **[How it works](#how-it-works)** · **[Stopping rules](#the-stopping-rules)** · **[Measurement](#measuring-money-honestly)** · **[What is not built](#not-built-yet)**
+**[Verify the claims](#verify-every-claim-in-60-seconds)** · **[How it works](#how-it-works)** · **[Stopping rules](#the-stopping-rules)** · **[How Gemini is used](#how-gemini-is-used)** · **[Measurement](#measuring-money-honestly)** · **[What is not built](#not-built-yet)**
+
+<sub>Original work of **Rahul Hongekar** · [github.com/RahulH007](https://github.com/RahulH007) · Razorpay Buildathon, Track 03 · see [NOTICE](NOTICE.md)</sub>
 
 </div>
 
@@ -65,10 +68,10 @@ python -m app.tools.run_demo         # seeded batch -> the receipt below
 python -m app.tools.verify_ledger    # walks the chain, exits non-zero if broken
 python -m app.tools.tamper_demo      # edits a cost in the DB, watch it get caught
 python -m app.tools.run_measurement  # incremental lift with a 95% CI
-python -m pytest tests/ -q           # 92 tests
+python -m pytest tests/ -q           # 133 tests
 ```
 
-<sub>A `Makefile` wraps these as `make demo`, `make verify-ledger`, `make tamper-demo`, `make measure`, `make test`. Python is the primary interface because `make` is absent from a default Windows install.</sub>
+<sub>A `Makefile` wraps these as `make demo`, `make verify-ledger`, `make tamper-demo`, `make measure`, `make test`, `make llm-activity`, `make refresh-llm-cache`. Python is the primary interface because `make` is absent from a default Windows install.</sub>
 
 ### `run_demo` — run it as often as you like, the output never changes
 
@@ -76,29 +79,39 @@ Every figure below, **the ledger head hash included**, is identical on every run
 
 ```text
   Seed                : 20260825  (deterministic)
-  Records             : 57
+  Records             : 65
   Attempt cap         : 3 per payment
   Cost ceiling        : 15% of payment value
+  Assumed margin      : 20%
   Holdout             : 20% of contacts, never contacted
 ------------------------------------------------------------------------
   OUTCOME
     treated           :  42 records,  20 recovered  (47.6%)
     control           :  11 records,   0 recovered  (0.0%)
     attributable      :  20 payments worth Rs 103,300.00
-    channel spend     : Rs 30.00
+    channel spend     : Rs 29.50
 ------------------------------------------------------------------------
   WHY WE STOPPED
       1  RETRY_CAP_REACHED          2  CONSENT_WITHDRAWN
       1  CAC_CEILING                2  QUIET_HOURS_DEFERRED
-      1  NEGATIVE_EXPECTED_VALUE    4  HARD_DECLINE
-      1  ESCALATED_TO_HUMAN        14  LADDER_EXHAUSTED
+      1  NEGATIVE_EXPECTED_VALUE   12  HARD_DECLINE
+      2  ESCALATED_TO_HUMAN        13  LADDER_EXHAUSTED
      11  HOLDOUT_CONTROL
 ------------------------------------------------------------------------
+  AI ACTIVITY
+    model calls       : 0
+    classified by     : 57 rule engine / 0 llm agent
+    tokens in / out   : 0 / 0
+    mean latency      : 0 ms
+    copy rejected     : 35
+------------------------------------------------------------------------
   LEDGER
-    entries           : 388
+    entries           : 470
     chain             : VALID
-    head              : 1c61537bff157538c209bafea604ab5fbd3c3c82f78e5b0e7a15bcdba2a4c5c5
+    head              : ad72a0677f3375f7dec0effb88e5774ba7f9af2d9dfa4c2c3000af34dfa59b6f
 ```
+
+<sub>The AI figures above are zero because `backend/data/llm_cache.json` is empty in this checkout: demo mode replays recorded Gemini responses and never invents one, so with nothing recorded, every model call is a miss and every generated message falls back to its deterministic template. Run `make refresh-llm-cache` once with a real `GEMINI_API_KEY` to populate it. See [How Gemini is used](#how-gemini-is-used).</sub>
 
 ### `tamper_demo` — the part worth watching
 
@@ -106,11 +119,11 @@ It opens the SQLite file **directly, outside the application**, and changes a re
 
 ```text
   RESULT: TAMPERING DETECTED
-    broken at sequence : 104
-    entries verified   : 104 (before the break)
-    reason             : Content tampered at sequence 104 (payment pay_AF016p4bC8d,
-                         action WHATSAPP_LINK_SENT): stored hash c58ecf0dd3e618bf...
-                         but content hashes to 3acbe33b3bea995f...
+    broken at sequence : 105
+    entries verified   : 105 (before the break)
+    reason             : Content tampered at sequence 105 (payment pay_AF016p4bC8d,
+                         action WHATSAPP_LINK_SENT): stored hash 564169bf97be26df...
+                         but content hashes to 68bf9240c7809c49...
 ```
 
 It names the row, the payment, the action, and both hashes. The edit only got that far because the script drops its own append-only triggers first — with them in place, SQLite itself rejects the `UPDATE`.
@@ -179,6 +192,7 @@ The policy engine decides whether to act at all. Refusals are written as `POLICY
 | `NEGATIVE_EXPECTED_VALUE` | The channel costs more than the expected margin recovered |
 | `CONSENT_WITHDRAWN` | This contact opted out — on this payment or any other |
 | `QUIET_HOURS_DEFERRED` | Voice calls are not placed 21:00–09:00 IST |
+| `PROMISE_TO_PAY_PENDING` | The customer stated a date; attempts pause until it passes |
 | `HARD_DECLINE` | Compliance-mandated halt; zero retries, zero outreach |
 | `HOLDOUT_CONTROL` | Assigned to the untreated control arm |
 | `LADDER_EXHAUSTED` | The escalation ladder for this class has no further step |
@@ -211,11 +225,54 @@ The transient ladder is deliberately **longer** than the attempt cap so the cap 
 
 ---
 
+## How Gemini is used
+
+Gemini does three jobs here. It does not do a fourth.
+
+| Job | Where | What it produces |
+|---|---|---|
+| **Diagnose** an error the rule engine does not recognise | `classifier.py` slow path | `root_cause_class`, a plain-language explanation, a suggested action, a confidence |
+| **Read** an inbound customer reply | `inbound.py` | intent, sentiment, a promise-to-pay date |
+| **Write** the WhatsApp message and voice script for that specific customer | `llm_agent.py` | Hinglish copy naming the customer, amount and reason |
+
+**What it never does is decide how to spend money.** `policy.py` owns that, and reads exactly one field from a diagnosis: `root_cause_class`. The model's `suggested_action` is written to the ledger and never executed — it is there so a reviewer can compare what the model proposed against what the policy actually did.
+
+### Fast path, slow path
+
+Most records never reach the model. An `error.reason` present in `RULE_MAP` is classified deterministically, at zero cost, by the rule engine. The model is asked only where the rules run out. The receipt prints the split for exactly this reason: a system claiming every decision is AI is the easiest kind of claim to disprove.
+
+### The model can add a stop, never remove one
+
+An inbound reply is read by Gemini **and** by a keyword matcher, and the two results are OR-ed. If the model reads *"band karo"* as an agreement to pay, the contact is suppressed anyway. A missed opt-out is the one error in this system with a regulator attached to it, so the model is never the only thing standing between a customer and another message.
+
+### The model writes the words, never the numbers
+
+Every generated message is checked before it is sent: each amount in the text must equal the record's amount in paise, and each link must be one we created. On failure the deterministic template is sent instead and an `LLM_OUTPUT_REJECTED` entry records what was rejected and why. A wrong amount in a recovery message is not a cosmetic defect — it is a payment instruction a customer may act on.
+
+### Why demo mode replays recorded responses
+
+The ledger hashes `llm_model`, `llm_latency_ms` and `llm_confidence_bp`, and the model's text lands in the hashed `details` field. A live call returns different text and a different latency on every run, so calling Gemini directly would mean the demo could never reproduce its own head hash — and reproducibility is the claim this whole repository rests on.
+
+So responses are recorded once against a real key and committed to `backend/data/llm_cache.json`:
+
+```bash
+make refresh-llm-cache              # fills missing keys only
+make refresh-llm-cache ARGS=--all   # re-records everything, after a prompt change
+```
+
+Three consequences worth stating:
+
+- **The committed file is the evidence.** Open it and read exactly what Gemini returned, with model, token counts and latency, without an API key and without trusting this README.
+- **A cache miss raises. It does not fall back to a template.** The previous build silently simulated every model call in demo mode, which is precisely why its AI claims could not be verified — the demo looked identical whether the model ran or not. A green run now means recorded model output was actually used.
+- **The cache key includes a prompt version.** Editing a prompt without bumping it would replay an answer to a question no longer being asked.
+
+---
+
 ## Measuring money honestly
 
 The demo batch shows the mechanism. It deliberately **does not report lift**.
 
-With 57 records a 20% holdout leaves 11 controls. Across ten assignment seeds the control recovery rate on this dataset swings between **0% and 41.7%**, mean 22.3 against a population rate of 24.6. The estimator is unbiased; the sample is simply too small. Eleven observations cannot carry a causal claim, and this project's whole argument is that it does not overstate.
+With 65 records a 20% holdout leaves 11 controls. Across ten assignment seeds the control recovery rate on this dataset swings between **0% and 41.7%**, mean 22.3 against a population rate of 24.6. The estimator is unbiased; the sample is simply too small. Eleven observations cannot carry a causal claim, and this project's whole argument is that it does not overstate.
 
 So measurement is a separate command over a larger population — 2,000 contacts, 10 seeds ([`results/lift_analysis.md`](results/lift_analysis.md)):
 
@@ -251,15 +308,15 @@ Channel spend is small because messaging in India is cheap relative to the payme
 | Customer outcomes | *Simulated* — each record carries a stated counterfactual |
 | WhatsApp sends, voice calls, TTS | *Simulated* — nothing leaves the machine |
 | Razorpay payment links and settlement webhooks | *Not wired* — see below |
-| Gemini classification | *Present but dormant* — see below |
+| Gemini diagnosis, reply reading, message writing | **Real** — recorded responses, replayed deterministically |
 
 ### Not built yet
 
 Stated plainly, because a reviewer will find these anyway.
 
 - **The live Razorpay loop is not implemented.** `verify_webhook_signature` returns `True` when the webhook secret is unset — fail-open. `payment.failed` is acknowledged but not ingested. Settlement matches on `payment_id`, but Razorpay's `payment.captured` carries the *new* payment's id, so nothing would match until link creation passes `notes={"recoveros_payment_id": ...}`. Known and specified, not overlooked.
-- **The Gemini path does not run by default.** `DEMO_MODE` defaults to `true` and gates every LLM call. Set `DEMO_MODE=false` with a valid `GEMINI_API_KEY` to enable it.
-- **Even enabled, LLM classification fires on 0 of 57 records**, because every error reason in the dataset is already in the deterministic `RULE_MAP`. The slow path is real code the current dataset never exercises. The `llm_agent` entries in a batch are voice-script generation, not classification.
+- **Demo mode replays recorded Gemini responses rather than calling the API.** This is deliberate and it is explained in full under [How Gemini is used](#how-gemini-is-used). The short version: a live model returns different text and a different latency every time, and both land in the hash preimage, so a demo that called Gemini directly could never reproduce its own head hash. `DEMO_MODE=false` makes real calls.
+- **The recorded cache ships empty in this checkout.** Until `make refresh-llm-cache` is run once with a real key, the AI figures in the receipt above are zero and every generated message falls back to its template.
 - **SQLite, single node.** WAL and a busy timeout are configured; production needs Postgres and a database-level sequence.
 - **The "Ask RAY" widget is scripted**, not a live model call.
 
@@ -309,7 +366,7 @@ The check runs *inside* each channel action rather than once at the top, so a ch
 
 <br/>
 
-`backend/data/test_batch_50.json` holds **57 synthetic records**.
+`backend/data/test_batch_50.json` holds **65 synthetic records**.
 
 | Failure class | Records |
 |---|---:|
@@ -347,7 +404,7 @@ A counterfactual hidden inside code is not evidence; one sitting in the input da
 
 **Refusals are styled as outcomes, not errors.** In the Audit Inspector a policy refusal is amber, not red. A system that declines to spend money on a customer who does not want to hear from it has succeeded.
 
-**No agent framework.** Orchestration is a deterministic rule engine, a finite state machine and a policy layer. Gemini is called only for the ambiguous slice, with structured output and a confidence threshold that escalates to a human below 0.7. A system whose product is auditability should not bury its decisions inside an opaque agent loop.
+**No agent framework.** Orchestration is a deterministic rule engine, a finite state machine and a policy layer. Gemini is called only for the ambiguous slice — diagnosing unmapped errors, reading customer replies, writing per-customer copy — with structured output and a confidence threshold that escalates to a human below 0.7. It never chooses a channel or authorises a rupee of spend. A system whose product is auditability should not bury its decisions inside an opaque agent loop.
 
 </details>
 
@@ -367,8 +424,10 @@ Every endpoint below exists. `curl` any of them against a running server.
 | `GET` | `/api/ledger/head` | Current head hash and entry count |
 | `GET` | `/api/audit/{payment_id}` | Full audit trail for one payment |
 | `GET` | `/api/audit/{payment_id}/verify` | Recompute that payment's entry hashes |
+| `GET` | `/api/llm/activity` | Model calls, tokens, latency, rejections, rule/model split |
 | `GET` | `/api/recovery/{payment_id}` | Record with audit trail |
 | `POST` | `/api/recovery/{payment_id}/opt-out` | Withdraw consent for this contact |
+| `POST` | `/api/recovery/{payment_id}/reply` | Inbound customer message; Gemini reads it, policy acts on it |
 | `POST` | `/api/recovery/{payment_id}/settle` | Simulate settlement |
 | `POST` | `/api/recovery/{payment_id}/dtmf` | Voice keypad response |
 | `GET` | `/api/voice/{payment_id}` | Hinglish voice script |
@@ -414,7 +473,7 @@ DATABASE_URL=sqlite:///./recoveros.db
 
 ## Tests
 
-**92 tests across 14 modules.**
+**133 tests across 19 modules.**
 
 ```bash
 cd backend && python -m pytest tests/ -q
@@ -428,6 +487,11 @@ cd backend && python -m pytest tests/ -q
 | `test_outcome_engine.py` | Draw reproducibility, order independence, attribution, holdout stratification |
 | `test_guardrails.py` | Attempt cap, cost ceiling, opt-out precision |
 | `test_e2e.py` | Full batch, terminal states, deferred records staying open |
+| `test_llm_cache.py` | Key stability, prompt-version invalidation, replayed latency, miss raises rather than falls back |
+| `test_diagnosis.py` | Slow-path diagnosis, out-of-enum class, low confidence, suggestion recorded but not acted on |
+| `test_inbound_reply.py` | Intent dispatch, keyword override of the model, promise-to-pay, model metadata on every entry |
+| `test_llm_activity.py` | Activity derived from the ledger, rejection counting |
+| `test_attribution.py` | Authorship present in every module and reviewer-facing file; entry point imports |
 | *and 8 more* | Classifier, recovery actions, settlement, webhooks, batch, state machine, WebSocket |
 
 ---
@@ -442,14 +506,19 @@ backend/
     consent.py           customer-level suppression, quiet hours
     outcome_engine.py    counterfactual replay, holdout assignment
     guardrails.py        attempt cap, cost ceiling, opt-out detection
-    classifier.py        error code to failure class
+    classifier.py        error code to failure class: rules first, model second
+    llm_cache.py         records real Gemini responses, replays them deterministically
+    llm_agent.py         diagnosis, reply parsing, per-customer copy, output guards
+    inbound.py           customer reply -> deterministic consequence
     state_machine.py     lifecycle FSM; routes all writes through the ledger
     recovery_actions.py  channel implementations
     models.py            ORM, append-only enforcement
-    routes/              webhooks, batch, recovery, metrics, audit, ledger
-    tools/               run_demo, verify_ledger, tamper_demo, run_measurement
-  data/                  57-record dataset with stated counterfactuals
-  tests/                 92 tests
+    routes/              webhooks, batch, recovery, metrics, audit, ledger, llm
+    tools/               run_demo, verify_ledger, tamper_demo, run_measurement,
+                         refresh_llm_cache
+  data/                  65-record dataset with stated counterfactuals
+                         plus llm_cache.json, the recorded Gemini responses
+  tests/                 133 tests
 frontend/                React 19, Vite, Tailwind 4
 results/                 committed output from the commands above
 docs/                    architecture notes and screenshots
@@ -459,8 +528,10 @@ docs/                    architecture notes and screenshots
 
 <div align="center">
 
-**Built by Rahul** for the Razorpay Buildathon, Track 03.
+**Built by [Rahul Hongekar](https://github.com/RahulH007)** for the Razorpay Buildathon, Track 03.
 
 <sub>Every number in this document was produced by a command in it.</sub>
+
+<sub>Copyright (c) 2026 Rahul Hongekar. Published for evaluation; no licence granted. See [NOTICE.md](NOTICE.md).</sub>
 
 </div>

@@ -1,6 +1,9 @@
 """
 RecoverOS — FastAPI Application Entry Point
 Autonomous AI Revenue Recovery Engine
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 from contextlib import asynccontextmanager
@@ -8,7 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-from app import ledger
+from app import ledger, __about__
 from app.database import engine, Base, SessionLocal
 from app.models import install_append_only_triggers
 from app.websocket_manager import manager
@@ -45,8 +48,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="RecoverOS API",
-    description="Autonomous AI Revenue Recovery Engine — Razorpay Hackathon",
-    version="1.0.0",
+    description=(
+        "Revenue recovery with a tamper-evident audit trail.\n\n"
+        f"{__about__.NOTICE}"
+    ),
+    version=__about__.VERSION,
+    contact={"name": __about__.AUTHOR, "url": __about__.AUTHOR_GITHUB_URL},
     lifespan=lifespan,
 )
 
@@ -63,7 +70,21 @@ app.add_middleware(
 # --- Health Check ---
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "version": "1.0.0", "service": "RecoverOS"}
+    return {
+        "status": "ok",
+        "service": __about__.PROJECT,
+        "version": __about__.VERSION,
+        # Attribution travels with the API itself, so a deployed copy still
+        # names its author even when the repository is not in view.
+        "author": __about__.AUTHOR,
+        "github": __about__.AUTHOR_GITHUB,
+    }
+
+
+@app.get("/")
+async def root():
+    """Project identity. Deliberately the first thing the API says."""
+    return __about__.as_dict()
 
 
 # --- WebSocket Endpoint ---
@@ -79,7 +100,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 # --- Mount Route Modules ---
-from app.routes import webhooks, batch, recovery, metrics, audit  # noqa: E402
+from app.routes import webhooks, batch, recovery, metrics, audit, llm  # noqa: E402
 from app.routes import ledger as ledger_routes  # noqa: E402
 
 app.include_router(webhooks.router, prefix="/api", tags=["Webhooks"])
@@ -88,3 +109,4 @@ app.include_router(recovery.router, prefix="/api", tags=["Recovery"])
 app.include_router(metrics.router, prefix="/api", tags=["Metrics"])
 app.include_router(audit.router, prefix="/api", tags=["Audit Trail"])
 app.include_router(ledger_routes.router, prefix="/api", tags=["Ledger"])
+app.include_router(llm.router, prefix="/api", tags=["LLM Activity"])

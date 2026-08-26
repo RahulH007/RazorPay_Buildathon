@@ -1,6 +1,9 @@
 """
 RecoverOS Guardrails Engine
 Compliance & safety checks: opt-out detection, retry caps, CAC ceiling, fraud halt.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 import re

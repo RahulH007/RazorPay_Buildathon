@@ -5,9 +5,12 @@ Each reason code gets a test that proves it fires for the reason it claims,
 rather than merely that something stopped. The original guardrails passed
 their unit tests too — what they lacked was any path from those functions to a
 decision that actually halted work.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -242,3 +245,71 @@ async def test_terminal_refusal_closes_the_record(db_session, payment_record):
     await execute_recovery(db_session, record)
 
     assert record.recovery_state == "FAILED_STOPPED"
+
+
+# --- Promise-to-pay deferral ---
+
+def test_future_promise_defers_the_next_attempt(db_session, payment_record):
+    now = datetime(2026, 8, 25, 12, 0, tzinfo=timezone.utc)
+    record = payment_record(
+        payment_id="pay_p2p_001",
+        failure_class="AUTH_FRICTION",
+        recovery_state="INTERVENING",
+        promise_to_pay_at=now + timedelta(days=2),
+    )
+    db_session.add(record)
+    db_session.commit()
+
+    decision = decide_next_action(db_session, record, now=now)
+
+    assert decision.should_act is False
+    assert decision.reason_code == ReasonCode.PROMISE_TO_PAY_PENDING
+
+
+def test_elapsed_promise_does_not_block(db_session, payment_record):
+    now = datetime(2026, 8, 25, 12, 0, tzinfo=timezone.utc)
+    record = payment_record(
+        payment_id="pay_p2p_002",
+        failure_class="AUTH_FRICTION",
+        recovery_state="INTERVENING",
+        promise_to_pay_at=now - timedelta(hours=1),
+    )
+    db_session.add(record)
+    db_session.commit()
+
+    decision = decide_next_action(db_session, record, now=now)
+
+    assert decision.should_act is True
+
+
+def test_promise_does_not_override_hard_decline(db_session, payment_record):
+    """The first refusal must be the most fundamental one."""
+    now = datetime(2026, 8, 25, 12, 0, tzinfo=timezone.utc)
+    record = payment_record(
+        payment_id="pay_p2p_003",
+        failure_class="HARD_DECLINE",
+        promise_to_pay_at=now + timedelta(days=2),
+    )
+    db_session.add(record)
+    db_session.commit()
+
+    decision = decide_next_action(db_session, record, now=now)
+
+    assert decision.reason_code == ReasonCode.HARD_DECLINE
+
+
+def test_naive_promise_datetime_is_treated_as_utc(db_session, payment_record):
+    """SQLite returns naive datetimes; comparing them to an aware now raises."""
+    now = datetime(2026, 8, 25, 12, 0, tzinfo=timezone.utc)
+    record = payment_record(
+        payment_id="pay_p2p_004",
+        failure_class="AUTH_FRICTION",
+        recovery_state="INTERVENING",
+        promise_to_pay_at=datetime(2026, 8, 27, 12, 0),
+    )
+    db_session.add(record)
+    db_session.commit()
+
+    decision = decide_next_action(db_session, record, now=now)
+
+    assert decision.reason_code == ReasonCode.PROMISE_TO_PAY_PENDING

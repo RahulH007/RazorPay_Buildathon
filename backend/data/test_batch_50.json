@@ -429,7 +429,8 @@
       "responds_to": {
         "whatsapp_link": 0.3
       }
-    }
+    },
+    "customer_reply": "link bhejo, abhi kar deta hoon"
   },
   {
     "payment_id": "pay_AF017q5cD9e",
@@ -456,7 +457,8 @@
       "responds_to": {
         "whatsapp_link": 0.3
       }
-    }
+    },
+    "customer_reply": "mujhe ye messages nahi chahiye, band karo"
   },
   {
     "payment_id": "pay_AF018r6dE1f",
@@ -700,7 +702,8 @@
         "upi_resequence": 0.35,
         "whatsapp_link": 0.25
       }
-    }
+    },
+    "customer_reply": "salary aane do, 1st ko kar dunga"
   },
   {
     "payment_id": "pay_MB027a6mN1o",
@@ -1576,5 +1579,232 @@
         "human_queue": 0.35
       }
     }
+  },
+  {
+    "payment_id": "pay_LLM01aX9k2Qm",
+    "amount": 249900,
+    "currency": "INR",
+    "method": "emandate",
+    "subscription_id": "sub_LLM01",
+    "invoice_id": null,
+    "merchant_id": "merchant_A1b2C3",
+    "customer": {
+      "name": "Kavita Raman",
+      "email": "kavita.r@example.com",
+      "phone": "+919845100201"
+    },
+    "error": {
+      "source": "bank",
+      "step": "payment_initiation",
+      "reason": "npci_mandate_presentation_declined",
+      "description": "Mandate presented on the 5th but payer account balance was short at presentation time. Re-presentation permitted after 3 days."
+    },
+    "recovery_state": "INGESTED",
+    "behavior": {
+      "natural_recovery_at_hours": 96,
+      "responds_to": {
+        "whatsapp_link": 0.3,
+        "upi_resequence": 0.55
+      }
+    },
+    "_why": "Unmapped NPCI error - forces the classifier slow path (MANDATE_BALANCE)."
+  },
+  {
+    "payment_id": "pay_LLM02bY7n4Rp",
+    "amount": 89900,
+    "currency": "INR",
+    "method": "card",
+    "subscription_id": null,
+    "invoice_id": null,
+    "merchant_id": "merchant_A1b2C3",
+    "customer": {
+      "name": "Deepak Sethi",
+      "email": "d.sethi@example.com",
+      "phone": "+919845100202"
+    },
+    "error": {
+      "source": "bank",
+      "step": "authorization",
+      "reason": "issuer_3ds_timeout",
+      "description": "Cardholder did not complete the 3D Secure challenge within the issuer window; session expired."
+    },
+    "recovery_state": "INGESTED",
+    "behavior": {
+      "natural_recovery_at_hours": 48,
+      "responds_to": {
+        "whatsapp_link": 0.34
+      }
+    },
+    "_why": "Unmapped 3DS timeout - slow path should read AUTH_FRICTION."
+  },
+  {
+    "payment_id": "pay_LLM03cZ1p8Ts",
+    "amount": 156700,
+    "currency": "INR",
+    "method": "upi",
+    "subscription_id": null,
+    "invoice_id": null,
+    "merchant_id": "merchant_A1b2C3",
+    "customer": {
+      "name": "Farida Qureshi",
+      "email": "farida.q@example.com",
+      "phone": "+919845100203"
+    },
+    "error": {
+      "source": "gateway",
+      "step": "payment_initiation",
+      "reason": "psp_handle_unreachable",
+      "description": "The payer PSP did not respond to the collect request within the timeout. No debit occurred."
+    },
+    "recovery_state": "INGESTED",
+    "behavior": {
+      "natural_recovery_at_hours": 6,
+      "responds_to": {
+        "silent_retry": 0.5
+      }
+    },
+    "_why": "Unmapped PSP timeout - slow path should read TRANSIENT_TECHNICAL."
+  },
+  {
+    "payment_id": "pay_LLM04dA5q3Uv",
+    "amount": 42500,
+    "currency": "INR",
+    "method": "netbanking",
+    "subscription_id": null,
+    "invoice_id": null,
+    "merchant_id": "merchant_A1b2C3",
+    "customer": {
+      "name": "Rohit Bhandari",
+      "email": "rohit.b@example.com",
+      "phone": "+919845100204"
+    },
+    "error": {
+      "source": "bank",
+      "step": "payment_initiation",
+      "reason": "core_banking_batch_window",
+      "description": "Bank core banking system was in its nightly batch window and rejected the request. Transient by nature."
+    },
+    "recovery_state": "INGESTED",
+    "behavior": {
+      "natural_recovery_at_hours": 10,
+      "responds_to": {
+        "silent_retry": 0.52
+      }
+    },
+    "_why": "Unmapped batch-window rejection - second TRANSIENT_TECHNICAL slow-path case."
+  },
+  {
+    "payment_id": "pay_LLM05eB9r6Wx",
+    "amount": 1875000,
+    "currency": "INR",
+    "method": "netbanking",
+    "subscription_id": null,
+    "invoice_id": "INV-2026-4471",
+    "merchant_id": "merchant_A1b2C3",
+    "customer": {
+      "name": "Sunrise Textiles Pvt Ltd",
+      "email": "accounts@sunrisetextiles.example.com",
+      "phone": "+919845100205"
+    },
+    "error": {
+      "source": "internal",
+      "step": "payment_initiation",
+      "reason": "buyer_ap_cycle_pending",
+      "description": "Buyer accounts payable team has not released the invoice; payment run is fortnightly and this invoice missed the cycle."
+    },
+    "recovery_state": "INGESTED",
+    "customer_reply": "accounts team ko bola hai, 1st ko release hoga",
+    "behavior": {
+      "natural_recovery_at_hours": 240,
+      "responds_to": {
+        "whatsapp_link": 0.25,
+        "hinglish_voice": 0.6
+      }
+    },
+    "_why": "Unmapped AP-cycle delay (B2B_RECEIVABLE) plus a promise-to-pay reply."
+  },
+  {
+    "payment_id": "pay_LLM06fC2s7Xy",
+    "amount": 960000,
+    "currency": "INR",
+    "method": "netbanking",
+    "subscription_id": null,
+    "invoice_id": "INV-2026-4488",
+    "merchant_id": "merchant_A1b2C3",
+    "customer": {
+      "name": "Meridian Logistics LLP",
+      "email": "finance@meridianlog.example.com",
+      "phone": "+919845100206"
+    },
+    "error": {
+      "source": "internal",
+      "step": "payment_initiation",
+      "reason": "invoice_under_query",
+      "description": "Buyer has raised a query on line items and withheld payment pending clarification. Not a payment failure."
+    },
+    "recovery_state": "INGESTED",
+    "customer_reply": "amount galat hai, invoice check karo",
+    "behavior": {
+      "natural_recovery_at_hours": 400,
+      "responds_to": {
+        "hinglish_voice": 0.3
+      }
+    },
+    "_why": "Second B2B slow-path case, plus a dispute reply that must reach the human queue."
+  },
+  {
+    "payment_id": "pay_LLM07gD4t1Yz",
+    "amount": 67800,
+    "currency": "INR",
+    "method": "card",
+    "subscription_id": null,
+    "invoice_id": null,
+    "merchant_id": "merchant_A1b2C3",
+    "customer": {
+      "name": "Anjali Nair",
+      "email": "anjali.n@example.com",
+      "phone": "+919845100207"
+    },
+    "error": {
+      "source": "bank",
+      "step": "authorization",
+      "reason": "issuer_risk_hold",
+      "description": "Issuer placed a permanent risk hold on the instrument following a confirmed fraud report. Do not re-present."
+    },
+    "recovery_state": "INGESTED",
+    "behavior": {
+      "natural_recovery_at_hours": null,
+      "responds_to": {}
+    },
+    "_why": "Unmapped fraud hold - the slow path must reach HARD_DECLINE unaided."
+  },
+  {
+    "payment_id": "pay_LLM08hE6u2Za",
+    "amount": 129900,
+    "currency": "INR",
+    "method": "upi",
+    "subscription_id": null,
+    "invoice_id": null,
+    "merchant_id": "merchant_A1b2C3",
+    "customer": {
+      "name": "Vikram Chauhan",
+      "email": "vikram.c@example.com",
+      "phone": "+919845100208"
+    },
+    "error": {
+      "source": "customer",
+      "step": "authentication",
+      "reason": "upi_pin_attempts_exhausted",
+      "description": "Payer exceeded the permitted UPI PIN attempts and the session was locked by the PSP."
+    },
+    "recovery_state": "INGESTED",
+    "customer_reply": "pin bhool gaya, kal try karunga",
+    "behavior": {
+      "natural_recovery_at_hours": 30,
+      "responds_to": {
+        "whatsapp_link": 0.38
+      }
+    },
+    "_why": "Second AUTH_FRICTION slow-path case, plus a delay reply."
   }
 ]

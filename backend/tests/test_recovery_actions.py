@@ -1,3 +1,8 @@
+"""
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
+"""
+
 import pytest
 
 from app.models import AuditTrailEntry
@@ -81,3 +86,41 @@ async def test_voice_dtmf_opt_out_stops_active_record(db_session, payment_record
 
     assert result["response"] == "opt_out"
     assert record.recovery_state == "FAILED_STOPPED"
+
+
+@pytest.mark.asyncio
+async def test_rejected_copy_is_ledgered_and_the_template_is_sent(
+    db_session, payment_record, monkeypatch,
+):
+    """The guard is only worth having if a reviewer can see it fire."""
+    from app import llm_agent, recovery_actions
+    from app.models import AuditTrailEntry
+
+    record = payment_record(
+        payment_id="pay_reject_001", amount=249900, failure_class="AUTH_FRICTION",
+    )
+    db_session.add(record)
+    db_session.commit()
+
+    async def hallucinating_model(rec, link_url):
+        text = f"Namaste, aapka ₹9,999.00 ka payment pending hai. {link_url}"
+        ok, reason = llm_agent.verify_numbers(text, rec, link_url)
+        assert ok is False
+        return llm_agent._template_whatsapp(rec, link_url), {
+            "model": "gemini-2.0-flash", "input_tokens": 80,
+            "output_tokens": 25, "latency_ms": 210,
+        }, reason
+
+    monkeypatch.setattr(
+        recovery_actions, "generate_whatsapp_message", hallucinating_model,
+    )
+
+    result = await recovery_actions.send_whatsapp_link(db_session, record)
+
+    assert "9,999.00" not in result["message"]
+    assert "2,499.00" in result["message"]
+    entry = db_session.query(AuditTrailEntry).filter(
+        AuditTrailEntry.action == "LLM_OUTPUT_REJECTED"
+    ).one()
+    assert entry.llm_model == "gemini-2.0-flash"
+    assert "249900" in entry.details

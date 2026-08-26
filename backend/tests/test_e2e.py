@@ -1,3 +1,8 @@
+"""
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
+"""
+
 import random
 
 import pytest
@@ -22,13 +27,17 @@ async def test_recovery_batch_end_to_end(db_session, monkeypatch):
 
     assert result["status"] == "COMPLETED"
     assert len(records) == len(simulator.load_dataset())
-    # Every record reaches a terminal state EXCEPT those deferred by quiet
-    # hours, which stay open by design: a deferral is not a stop, and the call
-    # still has to be placed once the window opens.
+    # Every record reaches a terminal state EXCEPT those deferred, which stay
+    # open by design: a deferral is not a stop. Two things defer -- quiet
+    # hours, where the call still has to be placed once the window opens, and
+    # a customer promise to pay, where the attempt resumes after the date.
     deferred = {
         entry.payment_id
         for entry in db_session.query(AuditTrailEntry).filter(
-            AuditTrailEntry.action == "POLICY_DECLINED_QUIET_HOURS_DEFERRED"
+            AuditTrailEntry.action.in_((
+                "POLICY_DECLINED_QUIET_HOURS_DEFERRED",
+                "PROMISE_TO_PAY_RECORDED",
+            ))
         )
     }
     for record in records:
@@ -40,8 +49,12 @@ async def test_recovery_batch_end_to_end(db_session, monkeypatch):
             assert record.recovery_state in {"RECOVERED", "FAILED_STOPPED"}
     assert result["recovered_gmv"] > 0
 
+    # Asserting an exact count here would bake model output into the test:
+    # the slow path can legitimately diagnose an unmapped error as a hard
+    # decline. What must hold is the invariant, and that every rule-engine
+    # hard decline is still among them.
     hard_declines = [record for record in records if record.failure_class == "HARD_DECLINE"]
-    assert len(hard_declines) == 4
+    assert len(hard_declines) >= 4
     assert all(record.recovery_state == "FAILED_STOPPED" for record in hard_declines)
 
     for record in records:

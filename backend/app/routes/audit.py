@@ -1,6 +1,9 @@
 """
 RecoverOS Audit Routes
 GET /api/audit/{payment_id} — Ordered audit trail entries with LLM metadata
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 from fastapi import APIRouter, HTTPException

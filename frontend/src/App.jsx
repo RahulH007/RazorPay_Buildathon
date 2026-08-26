@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 // Components
 import MetricRibbon from './components/Dashboard/MetricRibbon';
 import KanbanBoard from './components/Dashboard/KanbanBoard';
+import AiActivityStrip from './components/Dashboard/AiActivityStrip';
+import AttributionFooter from './components/UI/AttributionFooter';
 import BatchControls from './components/Dashboard/BatchControls';
 import ActivityTicker from './components/Dashboard/ActivityTicker';
 import PhoneFrame from './components/PhoneSimulator/PhoneFrame';
@@ -510,6 +512,8 @@ function App() {
                   })}
                 </div>
 
+                <AiActivityStrip refreshKey={metrics} />
+
                 <KanbanBoard 
                   records={filteredRecords} 
                   onCardClick={handleCardClick} 
@@ -538,6 +542,8 @@ function App() {
           </div>
         )}
       </main>
+
+      <AttributionFooter />
 
       {/* ================= MOBILE SIMULATOR DRAWER ================= */}
       {mobileSimulatorOpen && (

@@ -4,6 +4,9 @@ Outcome engine tests.
 Two properties carry the whole measurement claim: draws are reproducible
 independent of processing order, and a recovery that would have happened
 anyway is not counted as attributable. Everything else is bookkeeping.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 import json
@@ -127,7 +130,10 @@ def _dataset():
     records = json.loads(DATASET.read_text(encoding="utf-8"))
     from app.classifier import RULE_MAP
     for record in records:
-        record["_failure_class"] = RULE_MAP[record["error"]["reason"]].value
+        mapped = RULE_MAP.get(record["error"]["reason"])
+        # Unmapped reasons are a stratum of their own: their real class is
+        # not knowable without a model call, and the arm must be fixed first.
+        record["_failure_class"] = mapped.value if mapped else "UNDIAGNOSED"
     return records
 
 

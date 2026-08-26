@@ -20,11 +20,16 @@ Rationale
   is not a stable preimage.
 * **NFC normalization** — audit details carry Rupee signs and Hinglish text.
   Normalizing guarantees one byte representation per visual string.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 from __future__ import annotations
 
 import hashlib
+import random
+import time
 import unicodedata
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
@@ -45,7 +50,11 @@ GENESIS_PREV_HASH = "0" * 64
 # the golden fixture test so a change cannot land silently.
 PREIMAGE_VERSION = 1
 
-MAX_APPEND_RETRIES = 5
+MAX_APPEND_RETRIES = 8
+
+# Starting point for jittered exponential backoff between append retries.
+# Retrying without a wait makes contending writers collide in lockstep.
+BACKOFF_BASE_SECONDS = 0.002
 
 
 class LedgerConflictError(RuntimeError):
@@ -234,7 +243,7 @@ def append_entry(
     """
     last_error: Optional[Exception] = None
 
-    for _ in range(MAX_APPEND_RETRIES):
+    for attempt in range(MAX_APPEND_RETRIES):
         head = get_head(db)
         sequence_no = 0 if head is None else head.sequence_no + 1
         prev_hash = GENESIS_PREV_HASH if head is None else head.entry_hash
@@ -263,8 +272,16 @@ def append_entry(
             db.commit()
         except IntegrityError as exc:
             # Another writer claimed this sequence_no / prev_hash first.
+            #
+            # Back off before re-reading the head. Without this the losing
+            # writers retry in lockstep and collide again immediately, so under
+            # four-way contention a writer can burn the whole retry budget
+            # without ever seeing an uncontended moment. The jitter is what
+            # breaks the lockstep; the growth keeps the wait short when
+            # contention is light, which is the common case.
             last_error = exc
             db.rollback()
+            time.sleep(random.uniform(0, BACKOFF_BASE_SECONDS * (2 ** attempt)))
             continue
 
         db.refresh(entry)

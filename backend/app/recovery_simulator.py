@@ -1,6 +1,9 @@
 """
 RecoverOS Recovery Simulator
 Probabilistic batch simulation engine for processing the 50-record dataset.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 import json
@@ -25,6 +28,8 @@ from app.classifier import RULE_MAP
 from app import outcome_engine
 from app.policy import ReasonCode
 from app.consent import record_opt_out
+from app.inbound import handle_reply
+from app.llm_cache import CacheMiss
 from app.websocket_manager import manager
 
 
@@ -113,8 +118,15 @@ async def run_batch_simulation(db: Session, batch_id: str) -> dict:
     # Assign the control group before processing anything. Holdout is decided
     # per contact and stratified by failure class, so it must be computed over
     # the whole population rather than record by record.
+    #
+    # Records whose error code the rule engine does not recognise form their
+    # own stratum. Their true class is not knowable without a model call, and
+    # arm assignment must precede any processing, so stratifying them together
+    # is the only honest option: the alternative is to diagnose first, which
+    # would let a model decide which arm a customer lands in.
     for item in dataset:
-        item["_failure_class"] = RULE_MAP[item["error"]["reason"]].value
+        mapped = RULE_MAP.get(item["error"]["reason"])
+        item["_failure_class"] = mapped.value if mapped else "UNDIAGNOSED"
     held_out = outcome_engine.assign_holdout(dataset, RECOVEROS_SEED, HOLDOUT_PERCENT)
 
     # Create batch run record
@@ -258,6 +270,52 @@ async def run_batch_simulation(db: Session, batch_id: str) -> dict:
             decision = result.get("decision", {})
             channel = decision.get("channel")
             attempt_no = decision.get("attempt_number", 0)
+
+            # A reply is an answer to a message, so it arrives after the first
+            # outbound attempt - never before one, and not so late that a
+            # single-step ladder finishes without the path ever running.
+            reply_text = record_data.get("customer_reply")
+            if reply_text and attempt_no == 0:
+                try:
+                    reply_result = await handle_reply(db, record, reply_text)
+                except CacheMiss as exc:
+                    # Same posture as the classifier: an unavailable model
+                    # escalates, it never guesses what the customer meant.
+                    log_audit(
+                        db, record,
+                        action="ESCALATED_TO_HUMAN",
+                        actor="system",
+                        details=f"Reply could not be read ({type(exc).__name__}). "
+                                f"No automated action taken on this message.",
+                    )
+                    # Automated recovery genuinely ends here: a message we
+                    # cannot read is a message a person has to answer, so the
+                    # record closes rather than sitting open forever.
+                    await transition_state(
+                        db, record,
+                        to_state="FAILED_STOPPED",
+                        actor="system",
+                        details="Handed to a human: inbound reply could not be read.",
+                    )
+                    reason_codes["ESCALATED_TO_HUMAN"] += 1
+                    break
+
+                reason_codes[f"REPLY_{reply_result['intent'].upper()}"] += 1
+
+                if reply_result["action_taken"] in ("suppressed", "human_queue"):
+                    await transition_state(
+                        db, record,
+                        to_state="FAILED_STOPPED",
+                        actor="policy_engine",
+                        details=(
+                            f"Stopped after customer reply: "
+                            f"{reply_result['action_taken']}."
+                        ),
+                    )
+                    break
+
+                if reply_result["action_taken"] == "deferred":
+                    break
 
             outcome = outcome_engine.attempt_outcome(
                 record.payment_id, behaviour, channel, attempt_no, RECOVEROS_SEED

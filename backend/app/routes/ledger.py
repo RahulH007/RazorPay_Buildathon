@@ -2,6 +2,9 @@
 RecoverOS Ledger Routes
 GET /api/ledger/verify — recompute and verify the entire hash chain
 GET /api/ledger/head   — current chain head hash and entry count
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 from fastapi import APIRouter

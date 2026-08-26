@@ -1,6 +1,9 @@
 """
 RecoverOS Metrics Routes
 GET /api/metrics/dashboard — Aggregated dashboard metrics
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 from fastapi import APIRouter

@@ -1,6 +1,9 @@
 """
 RecoverOS Configuration Module
 Loads environment variables and defines system constants.
+
+RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
+Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
 import os
