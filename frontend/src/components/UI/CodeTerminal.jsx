@@ -1,21 +1,28 @@
 import { useState } from 'react';
 import { Copy, Check, Terminal } from 'lucide-react';
 
-export default function CodeTerminal({ 
-  filename = 'webhook-handler.ts',
+// The snippet is the real handler, lightly trimmed, from
+// backend/app/routes/webhooks.py. It used to be a TypeScript SDK call to a
+// package that does not exist, on a project whose backend is Python - the
+// first thing a reviewer who opened the repo would have noticed.
+export default function CodeTerminal({
+  filename = 'app/routes/webhooks.py',
   className = ''
 }) {
   const [copied, setCopied] = useState(false);
 
-  const rawSnippet = `export async function POST(req: Request) {
-  // Ingest failed payment webhook from Razorpay
-  const event = await req.json();
-  if (event.event === 'payment.failed') {
-    // Autonomous diagnosis & multi-rail recovery
-    await razorpayRecoveryEngine.diagnoseAndRecover(event.payload);
-  }
-  return Response.json({ status: 'queued' });
-}`;
+  const rawSnippet = `@router.post("/webhooks/razorpay")
+async def receive_webhook(req: Request):
+    # Verify the exact bytes, before parsing.
+    body = await req.body()
+    sig = req.headers.get("X-Razorpay-Signature")
+
+    if not verify_signature(body, sig):
+        raise HTTPException(401, "Bad signature")
+
+    event = (await req.json()).get("event")
+    if event == "payment.captured":
+        return await handle_captured(db, payload)`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(rawSnippet);
@@ -58,15 +65,18 @@ export default function CodeTerminal({
       {/* Code Body */}
       <pre className="p-4 font-mono text-xs leading-relaxed overflow-x-auto text-slate-300 select-text">
         <code>
-          <div><span className="text-cyan-400 font-semibold">export async function</span> <span className="text-blue-400 font-semibold">POST</span>(req: <span className="text-emerald-300">Request</span>) &#123;</div>
-          <div className="text-slate-500 italic">  // Ingest failed payment webhook from Razorpay</div>
-          <div>  <span className="text-cyan-400 font-semibold">const</span> event = <span className="text-cyan-400 font-semibold">await</span> req.<span className="text-blue-300">json</span>();</div>
-          <div>  <span className="text-cyan-400 font-semibold">if</span> (event.event === <span className="text-teal-300">&apos;payment.failed&apos;</span>) &#123;</div>
-          <div className="text-slate-500 italic">    // Autonomous diagnosis &amp; multi-rail recovery</div>
-          <div>    <span className="text-cyan-400 font-semibold">await</span> razorpayRecoveryEngine.<span className="text-blue-400 font-semibold">diagnoseAndRecover</span>(event.payload);</div>
-          <div>  &#125;</div>
-          <div>  <span className="text-cyan-400 font-semibold">return</span> Response.<span className="text-blue-300">json</span>(&#123; status: <span className="text-teal-300">&apos;queued&apos;</span> &#125;);</div>
-          <div>&#125;</div>
+          <div><span className="text-amber-300">@router.post</span>(<span className="text-teal-300">&quot;/webhooks/razorpay&quot;</span>)</div>
+          <div><span className="text-cyan-400 font-semibold">async def</span> <span className="text-blue-400 font-semibold">receive_webhook</span>(req: <span className="text-emerald-300">Request</span>):</div>
+          <div className="text-slate-500 italic">    # Verify the exact bytes, before parsing.</div>
+          <div>    body = <span className="text-cyan-400 font-semibold">await</span> req.<span className="text-blue-300">body</span>()</div>
+          <div>    sig = req.headers.<span className="text-blue-300">get</span>(<span className="text-teal-300">&quot;X-Razorpay-Signature&quot;</span>)</div>
+          <div>&nbsp;</div>
+          <div>    <span className="text-cyan-400 font-semibold">if not</span> <span className="text-blue-400 font-semibold">verify_signature</span>(body, sig):</div>
+          <div>        <span className="text-cyan-400 font-semibold">raise</span> <span className="text-emerald-300">HTTPException</span>(<span className="text-orange-300">401</span>, <span className="text-teal-300">&quot;Bad signature&quot;</span>)</div>
+          <div>&nbsp;</div>
+          <div>    event = (<span className="text-cyan-400 font-semibold">await</span> req.<span className="text-blue-300">json</span>()).<span className="text-blue-300">get</span>(<span className="text-teal-300">&quot;event&quot;</span>)</div>
+          <div>    <span className="text-cyan-400 font-semibold">if</span> event == <span className="text-teal-300">&quot;payment.captured&quot;</span>:</div>
+          <div>        <span className="text-cyan-400 font-semibold">return await</span> <span className="text-blue-400 font-semibold">handle_captured</span>(db, payload)</div>
         </code>
       </pre>
     </div>

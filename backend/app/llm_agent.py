@@ -47,7 +47,7 @@ def format_amount(amount_paise: int) -> str:
 # --- LLM Function 1: Customer Reply Parsing ---
 
 PROMPT_VERSION_REPLY = 1
-MODEL_REPLY = "gemini-2.0-flash"
+MODEL_REPLY = "gemini-3.6-flash"
 
 REPLY_SYSTEM_PROMPT = """You are a payment recovery assistant for an Indian fintech platform.
 Analyze the customer's reply to a recovery message and extract structured intent.
@@ -167,7 +167,7 @@ def _coerce_intent(raw_text: str) -> ParsedIntent:
 # --- LLM Function 2: Failure Diagnosis (classifier slow path) ---
 
 PROMPT_VERSION_DIAGNOSIS = 1
-MODEL_DIAGNOSIS = "gemini-2.0-flash"
+MODEL_DIAGNOSIS = "gemini-3.6-flash"
 
 DIAGNOSIS_SYSTEM_PROMPT = """You are a payments reliability engineer working on Indian
 payment failures (UPI, cards, NACH/e-mandate, netbanking). You are given the raw
@@ -325,7 +325,7 @@ def verify_numbers(text: str, record, link_url: str | None = None) -> tuple[bool
 # --- LLM Function 3: Per-customer WhatsApp copy ---
 
 PROMPT_VERSION_WHATSAPP = 1
-MODEL_WHATSAPP = "gemini-2.0-flash"
+MODEL_WHATSAPP = "gemini-3.6-flash"
 
 WHATSAPP_SYSTEM_PROMPT = """Write a short WhatsApp message in Hinglish (Hindi written in
 Latin script, mixed with English) asking a customer to complete a failed payment.
@@ -374,8 +374,13 @@ PAYMENT LINK (use verbatim): {link_url}
             inputs=inputs,
             contents=f"{WHATSAPP_SYSTEM_PROMPT}\n\n{user_prompt}",
         )
-    except Exception as e:
-        return fallback, {}, f"Generation unavailable: {type(e).__name__}"
+    except llm_cache.CacheMiss as e:
+        # An unrecorded response is an expected, recoverable state: ship the
+        # template and say so. Anything else - a retired model, a bad key, a
+        # network failure - is a configuration fault, and swallowing it here
+        # would report it as "the model wrote bad copy" while quietly burning
+        # one live API call per record. Let it surface.
+        return fallback, {}, f"Generation unavailable: {e.__class__.__name__}"
 
     text = response.text.strip()
     metadata = {
@@ -408,7 +413,7 @@ def _template_whatsapp(record, link_url: str) -> str:
 # --- LLM Function 4: Hinglish Voice Script Generation ---
 
 PROMPT_VERSION_SCRIPT = 1
-MODEL_SCRIPT = "gemini-2.5-pro"
+MODEL_SCRIPT = "gemini-3.6-flash"
 
 SCRIPT_SYSTEM_PROMPT = """Generate a polite, professional Hinglish voice script for a
 payment recovery call. Conversational, respectful, under 30 seconds spoken.
@@ -460,8 +465,9 @@ OUTPUT: Plain text script in Hinglish, ready for TTS."""
             inputs=inputs,
             contents=f"{SCRIPT_SYSTEM_PROMPT}\n\n{user_prompt}",
         )
-    except Exception as e:
-        return fallback, {}, f"Generation unavailable: {type(e).__name__}"
+    except llm_cache.CacheMiss as e:
+        # Only a cache miss falls back quietly - see generate_whatsapp_message.
+        return fallback, {}, f"Generation unavailable: {e.__class__.__name__}"
 
     script = response.text.strip()
     metadata = {

@@ -107,7 +107,7 @@ async def test_rejected_copy_is_ledgered_and_the_template_is_sent(
         ok, reason = llm_agent.verify_numbers(text, rec, link_url)
         assert ok is False
         return llm_agent._template_whatsapp(rec, link_url), {
-            "model": "gemini-2.0-flash", "input_tokens": 80,
+            "model": "gemini-3.6-flash", "input_tokens": 80,
             "output_tokens": 25, "latency_ms": 210,
         }, reason
 
@@ -122,5 +122,53 @@ async def test_rejected_copy_is_ledgered_and_the_template_is_sent(
     entry = db_session.query(AuditTrailEntry).filter(
         AuditTrailEntry.action == "LLM_OUTPUT_REJECTED"
     ).one()
-    assert entry.llm_model == "gemini-2.0-flash"
+    assert entry.llm_model == "gemini-3.6-flash"
     assert "249900" in entry.details
+
+
+@pytest.mark.asyncio
+async def test_fraud_quarantine_is_recorded_as_a_system_action(db_session, payment_record):
+    """
+    A fraud halt must not be logged as a customer opt-out.
+
+    The dashboard drill used to call the opt-out endpoint, which writes
+    CUSTOMER_OPT_OUT with actor="customer". Misattributing the actor in a
+    ledger built to prove who did what is the one defect that discredits the
+    rest of it.
+    """
+    from app.consent import is_suppressed
+    from app.models import AuditTrailEntry
+    from app.routes.recovery import quarantine_record
+
+    record = payment_record(
+        payment_id="pay_fraud_001",
+        customer_phone="+919876512345",
+        failure_class="AUTH_FRICTION",
+        recovery_state="INTERVENING",
+    )
+    db_session.add(record)
+    db_session.commit()
+
+    import app.routes.recovery as recovery_routes
+    original = recovery_routes.SessionLocal
+    recovery_routes.SessionLocal = lambda: db_session
+    try:
+        result = await quarantine_record("pay_fraud_001")
+    finally:
+        recovery_routes.SessionLocal = original
+
+    assert result["status"] == "quarantined"
+    assert record.recovery_state == "FAILED_STOPPED"
+
+    entry = db_session.query(AuditTrailEntry).filter(
+        AuditTrailEntry.action == "FRAUD_QUARANTINE"
+    ).one()
+    assert entry.actor == "system"
+
+    actions = [e.action for e in db_session.query(AuditTrailEntry).all()]
+    assert "CUSTOMER_OPT_OUT" not in actions
+
+    # A fraud suspicion is ours, not the customer's: their other payments
+    # must not be suppressed by it.
+    blocked, _reason = is_suppressed(db_session, "+919876512345", "whatsapp")
+    assert blocked is False

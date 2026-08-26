@@ -142,6 +142,66 @@ async def opt_out_record(payment_id: str):
         db.close()
 
 
+@router.post("/recovery/{payment_id}/quarantine")
+async def quarantine_record(payment_id: str):
+    """
+    Halt recovery on a fraud signal.
+
+    This exists because the dashboard's fraud drill previously called the
+    opt-out endpoint, which writes CUSTOMER_OPT_OUT with actor="customer" - a
+    system decision recorded as a customer request. Misattributing an actor in
+    a ledger that exists to prove who did what is precisely the failure this
+    project claims to prevent, so a fraud halt gets its own action and its own
+    actor.
+
+    Note it does NOT touch the consent registry: the customer withdrew nothing,
+    and suppressing their other payments on our suspicion would be a different
+    decision than the one being taken here.
+    """
+    db = SessionLocal()
+    try:
+        record = db.query(PaymentFailureRecord).filter(
+            PaymentFailureRecord.payment_id == payment_id
+        ).first()
+        if not record:
+            raise HTTPException(status_code=404, detail=f"Record not found: {payment_id}")
+
+        if record.recovery_state in ("RECOVERED", "FAILED_STOPPED"):
+            return {
+                "status": "already_terminal",
+                "payment_id": payment_id,
+                "recovery_state": record.recovery_state,
+            }
+
+        log_audit(
+            db, record,
+            action="FRAUD_QUARANTINE",
+            actor="system",
+            details=(
+                "WHY_WE_DIDNT_ACT: fraud signal raised against this payment. "
+                "Recovery halted pending manual review. No customer contact "
+                "was made and no consent was withdrawn."
+            ),
+            cost_paise=0,
+        )
+
+        await transition_state(
+            db, record,
+            to_state="FAILED_STOPPED",
+            actor="system",
+            details="FRAUD_QUARANTINE: halted for manual review",
+        )
+
+        return {
+            "status": "quarantined",
+            "payment_id": payment_id,
+            "recovery_state": "FAILED_STOPPED",
+            "message": "Recovery halted on a fraud signal, pending manual review",
+        }
+    finally:
+        db.close()
+
+
 @router.post("/recovery/{payment_id}/reply")
 async def receive_customer_reply(payment_id: str, payload: dict):
     """

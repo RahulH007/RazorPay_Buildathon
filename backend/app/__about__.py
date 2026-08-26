@@ -17,7 +17,7 @@ AUTHOR = "Rahul Hongekar"
 AUTHOR_GITHUB = "RahulH007"
 AUTHOR_GITHUB_URL = "https://github.com/RahulH007"
 PROJECT = "RecoverOS"
-PROJECT_URL = "https://github.com/RahulH007/RecoverOS"
+PROJECT_URL = "https://github.com/RahulH007/RazorPay_Buildathon"
 EVENT = "Razorpay Buildathon, Track 03"
 VERSION = "1.0.0"
 

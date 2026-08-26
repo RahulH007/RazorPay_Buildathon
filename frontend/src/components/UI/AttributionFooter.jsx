@@ -10,7 +10,7 @@ import { ArrowUpRight } from 'lucide-react';
 
 export const AUTHOR = 'Rahul Hongekar';
 export const AUTHOR_GITHUB = 'RahulH007';
-export const REPO_URL = 'https://github.com/RahulH007/RecoverOS';
+export const REPO_URL = 'https://github.com/RahulH007/RazorPay_Buildathon';
 
 export default function AttributionFooter() {
   return (

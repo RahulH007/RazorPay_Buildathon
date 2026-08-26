@@ -36,7 +36,7 @@ async def test_parse_customer_reply_returns_intent_and_metadata(recorded, paymen
     record = payment_record(payment_id="pay_reply_001")
     inputs = llm_agent.reply_inputs(record, "kal kar dunga")
     recorded(
-        "gemini-2.0-flash", llm_agent.PROMPT_VERSION_REPLY, inputs,
+        "gemini-3.6-flash", llm_agent.PROMPT_VERSION_REPLY, inputs,
         json.dumps({
             "intent": "request_delay", "confidence": 0.91,
             "extracted_date": "2026-08-26", "sentiment": "neutral",
@@ -49,7 +49,7 @@ async def test_parse_customer_reply_returns_intent_and_metadata(recorded, paymen
 
     assert parsed.intent == "request_delay"
     assert parsed.extracted_date == "2026-08-26"
-    assert metadata["model"] == "gemini-2.0-flash"
+    assert metadata["model"] == "gemini-3.6-flash"
     assert metadata["latency_ms"] == 317
     assert metadata["confidence"] == pytest.approx(0.91)
 
@@ -67,7 +67,7 @@ async def test_unknown_intent_from_the_model_becomes_unclear(recorded, payment_r
     record = payment_record(payment_id="pay_reply_003")
     inputs = llm_agent.reply_inputs(record, "kuch bhi")
     recorded(
-        "gemini-2.0-flash", llm_agent.PROMPT_VERSION_REPLY, inputs,
+        "gemini-3.6-flash", llm_agent.PROMPT_VERSION_REPLY, inputs,
         json.dumps({"intent": "will_negotiate", "confidence": 0.99}),
     )
 
@@ -81,7 +81,7 @@ async def test_unknown_intent_from_the_model_becomes_unclear(recorded, payment_r
 async def test_unparseable_output_becomes_unclear(recorded, payment_record):
     record = payment_record(payment_id="pay_reply_004")
     inputs = llm_agent.reply_inputs(record, "hmm")
-    recorded("gemini-2.0-flash", llm_agent.PROMPT_VERSION_REPLY, inputs, "not json at all")
+    recorded("gemini-3.6-flash", llm_agent.PROMPT_VERSION_REPLY, inputs, "not json at all")
 
     parsed, _ = await llm_agent.parse_customer_reply(record, "hmm")
 

@@ -51,8 +51,13 @@ export function formatTimeAgo(dateStr) {
 
 export function truncateId(id) {
   if (!id) return '';
-  if (id.length <= 16) return id;
-  return `${id.slice(0, 8)}...${id.slice(-4)}`;
+  // Drop the "pay_" prefix. It is on every id in the system, so it carries no
+  // information, and it costs four characters on the tightest line in the UI -
+  // the kanban card, where the column is ~166px and the id was being clipped
+  // mid-word on every card. The full id is one click away in the audit modal.
+  const short = id.startsWith('pay_') ? id.slice(4) : id;
+  if (short.length <= 14) return short;
+  return `${short.slice(0, 7)}…${short.slice(-4)}`;
 }
 
 export const FAILURE_CLASS_COLORS = {

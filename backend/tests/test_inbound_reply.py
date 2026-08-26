@@ -149,7 +149,7 @@ async def test_every_reply_is_ledgered_with_model_metadata(db_session, payment_r
         AuditTrailEntry.action == "CUSTOMER_REPLY_PARSED"
     ).one()
     assert entry.actor == "llm_agent"
-    assert entry.llm_model == "gemini-2.0-flash"
+    assert entry.llm_model == "gemini-3.6-flash"
     assert entry.llm_confidence_bp == 8700
     assert entry.llm_latency_ms == 288
 

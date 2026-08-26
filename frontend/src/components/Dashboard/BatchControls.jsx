@@ -7,7 +7,6 @@ export default function BatchControls({
   progress,
   onInspect,
   onOptOut,
-  onBankOutage,
   onFraudAlert,
 }) {
   const processed = Number(progress?.processed ?? progress?.processed_records ?? 0);
@@ -37,7 +36,7 @@ export default function BatchControls({
         ) : (
           <>
             <Play size={15} fill="currentColor" />
-            <span>Deploy RazorpayRecoveryEngine Free</span>
+            <span>Run recovery batch</span>
           </>
         )}
       </button>
@@ -86,7 +85,6 @@ export default function BatchControls({
       <div className="sm:ml-auto">
         <EdgeCaseToggles
           onOptOut={onOptOut}
-          onBankOutage={onBankOutage}
           onFraudAlert={onFraudAlert}
         />
       </div>

@@ -60,7 +60,7 @@ async def test_unmapped_error_is_diagnosed_by_the_model(db_session, payment_reco
         AuditTrailEntry.action == "FAILURE_DIAGNOSED_LLM"
     ).one()
     assert entry.actor == "llm_agent"
-    assert entry.llm_model == "gemini-2.0-flash"
+    assert entry.llm_model == "gemini-3.6-flash"
     assert entry.llm_confidence_bp == 8800
     assert "salary credit date" in entry.details
 

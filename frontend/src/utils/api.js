@@ -28,6 +28,7 @@ export const api = {
   // Recovery
   getRecovery: (paymentId) => apiFetch(`/api/recovery/${paymentId}`),
   optOut: (paymentId) => apiFetch(`/api/recovery/${paymentId}/opt-out`, { method: 'POST' }),
+  quarantine: (paymentId) => apiFetch(`/api/recovery/${paymentId}/quarantine`, { method: 'POST' }),
   settle: (paymentId) => apiFetch(`/api/recovery/${paymentId}/settle`, { method: 'POST' }),
   sendReply: (paymentId, message) => apiFetch(`/api/recovery/${paymentId}/reply`, {
     method: 'POST',

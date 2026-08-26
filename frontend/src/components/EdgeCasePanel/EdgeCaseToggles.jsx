@@ -1,31 +1,28 @@
-import { UserX, Unplug, Siren } from 'lucide-react';
+import { UserX, Siren } from 'lucide-react';
 
+// A "Bank Outage" drill used to sit here. It called a handler whose entire body
+// was an alert() describing behaviour that does not exist - no record moved, no
+// ledger entry was written. A drill that only claims to have run is worse than
+// no drill, so it is gone until fetch_payment_downtimes is actually wired.
 const BUTTONS = [
   {
     key: 'opt-out',
     label: 'Opt-Out',
     icon: UserX,
-    title: 'Trigger customer opt-out on a random INTERVENING record',
+    title: 'Withdraw consent on a random INTERVENING record. Suppression then crosses every other payment from that contact.',
     hoverClass: 'drill-btn-amber',
   },
   {
-    key: 'bank-outage',
-    label: 'Bank Outage',
-    icon: Unplug,
-    title: 'Simulate bank outage for transient records',
-    hoverClass: 'drill-btn-blue',
-  },
-  {
     key: 'fraud',
-    label: 'Fraud Alert',
+    label: 'Fraud Quarantine',
     icon: Siren,
-    title: 'Trigger fraud flag on a random record',
+    title: 'Halt a record on a fraud signal, recorded with actor="system" - not as a customer opt-out',
     hoverClass: 'drill-btn-rose',
   },
 ];
 
-export default function EdgeCaseToggles({ onOptOut, onBankOutage, onFraudAlert }) {
-  const handlers = { 'opt-out': onOptOut, 'bank-outage': onBankOutage, fraud: onFraudAlert };
+export default function EdgeCaseToggles({ onOptOut, onFraudAlert }) {
+  const handlers = { 'opt-out': onOptOut, fraud: onFraudAlert };
 
   return (
     <div className="flex items-center gap-2">

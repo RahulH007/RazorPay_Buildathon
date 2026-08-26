@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import MetricRibbon from './components/Dashboard/MetricRibbon';
 import KanbanBoard from './components/Dashboard/KanbanBoard';
 import AiActivityStrip from './components/Dashboard/AiActivityStrip';
+import ModelInterpretations from './components/Dashboard/ModelInterpretations';
 import AttributionFooter from './components/UI/AttributionFooter';
 import BatchControls from './components/Dashboard/BatchControls';
 import ActivityTicker from './components/Dashboard/ActivityTicker';
@@ -12,7 +13,6 @@ import AuditModal from './components/AuditInspector/AuditModal';
 import PillBadge from './components/UI/PillBadge';
 import BentoCard from './components/UI/BentoCard';
 import CodeTerminal from './components/UI/CodeTerminal';
-import RazorpayLogo from './components/UI/RazorpayLogo';
 import AskRayWidget from './components/UI/AskRayWidget';
 
 // Views
@@ -30,8 +30,7 @@ import {
   BookOpen, 
   User, 
   ArrowRight,
-  Headphones,
-  ChevronDown,
+  ArrowUpRight,
   X
 } from 'lucide-react';
 
@@ -61,34 +60,41 @@ const NAV_ITEMS = [
   { key: 'about', label: 'About' },
 ];
 
-// All pages use the official Razorpay white theme
+// The three stages of one record's life. The cards these replaced carried
+// invented benchmarks - "+24.8% Reclaimed", "94.2% Accuracy", "ensemble
+// models trained on 50M+ Razorpay transaction patterns" - none of which
+// exist in the codebase. Each badge now states a property a reviewer can
+// check against policy.py rather than a number nobody can reproduce.
 const BENTO_CARDS = [
   {
-    icon: 'zap',
-    iconColor: 'text-cyan-400',
-    iconBg: 'bg-blue-600/10 border-blue-500/20',
-    badgeLabel: '+24.8% Reclaimed',
-    badgeColor: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
-    title: 'Autonomous Fallback',
-    description: 'Dynamically reroutes failed subscription mandates through secondary payment methods and localized UPI payment links.',
-  },
-  {
     icon: 'brain',
-    iconColor: 'text-blue-400',
-    iconBg: 'bg-violet-600/10 border-violet-500/20',
-    badgeLabel: '94.2% Accuracy',
-    badgeColor: 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400',
-    title: 'AI Diagnostics Engine',
-    description: 'Classifies failure root causes in <18ms using ensemble models trained on 50M+ Razorpay transaction patterns.',
+    iconColor: 'text-violet-600',
+    iconBg: 'bg-violet-50 border-violet-200',
+    badgeLabel: 'rules first',
+    badgeColor: 'bg-violet-50 border-violet-200 text-violet-700',
+    title: 'Diagnose',
+    description:
+      'Known error codes are classified deterministically by the rule engine, at no cost. Gemini is asked only about codes the rules do not recognise, and returns a structured root cause with a confidence score.',
   },
   {
     icon: 'shield',
-    iconColor: 'text-emerald-400',
-    iconBg: 'bg-emerald-600/10 border-emerald-500/20',
-    badgeLabel: '3-Rail Recovery',
-    badgeColor: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
-    title: 'Multi-Rail Recovery',
-    description: 'Executes bounded recovery across WhatsApp, Hinglish Voice, and UPI resequence — each with independent audit trails.',
+    iconColor: 'text-amber-600',
+    iconBg: 'bg-amber-50 border-amber-200',
+    badgeLabel: '9 reason codes',
+    badgeColor: 'bg-amber-50 border-amber-200 text-amber-700',
+    title: 'Decide, or decline',
+    description:
+      'Attempt caps, a cost ceiling, consent withdrawal, quiet hours and a holdout arm all sit between a diagnosis and a message. Every refusal is written to the ledger with its reason.',
+  },
+  {
+    icon: 'zap',
+    iconColor: 'text-[var(--rzp-blue-600)]',
+    iconBg: 'bg-blue-50 border-blue-200',
+    badgeLabel: 'cheapest first',
+    badgeColor: 'bg-blue-50 border-blue-200 text-blue-700',
+    title: 'Escalate',
+    description:
+      'A silent retry costs nothing and is always tried first. WhatsApp, UPI re-sequencing, Hinglish voice and a human queue follow only as far as the ladder for that failure class allows.',
   },
 ];
 
@@ -277,21 +283,21 @@ function App() {
     }
   };
 
-  const handleBankOutage = () => {
-    alert('Bank outage drill initiated: Transient technical records held in retry queue until health check recovers.');
-  };
-
+  // Previously this called api.optOut, which writes CUSTOMER_OPT_OUT with
+  // actor="customer" - a system decision recorded as a customer request. In a
+  // ledger built to prove who did what, that is the one bug that discredits
+  // everything else, so the fraud halt now has its own endpoint and actor.
   const handleFraudAlert = async () => {
     const record = pickRandomIntervening((r) => r.failure_class !== 'HARD_DECLINE');
     if (!record) {
-      alert('No eligible records for fraud alert. Run a batch first!');
+      alert('No eligible records to quarantine. Run a batch first.');
       return;
     }
     try {
-      await api.optOut(record.payment_id);
+      await api.quarantine(record.payment_id);
       setTimeout(fetchDashboard, 500);
     } catch (err) {
-      console.warn('Fraud alert error:', err);
+      console.warn('Quarantine error:', err);
     }
   };
 
@@ -331,7 +337,15 @@ function App() {
       <header className="sticky top-0 z-40 h-16 shrink-0 border-b border-[var(--rzp-border)] bg-white">
         <div className="mx-auto flex h-full max-w-[1280px] items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-8">
-            <RazorpayLogo isLight />
+            {/* Wordmark only. The Razorpay logo used to sit here, which read as
+                "this is a Razorpay product" rather than a submission to their
+                buildathon. */}
+            <button
+              onClick={() => setActiveNav('home')}
+              className="shrink-0 cursor-pointer text-[19px] font-extrabold tracking-tight text-[var(--rzp-ink)] transition-colors hover:text-[var(--rzp-blue-600)]"
+            >
+              Recovery<span className="text-[var(--rzp-blue-600)]">Engine</span>
+            </button>
 
             <nav className="hidden items-center gap-1 lg:flex">
               {NAV_ITEMS.map(({ key, label }) => (
@@ -348,28 +362,27 @@ function App() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              title="Support"
-              onClick={() => setActiveNav('docs')}
-              className="hidden text-[var(--rzp-ink)] transition-colors hover:text-[var(--rzp-blue-600)] sm:flex cursor-pointer"
+            {/* Login and Sign Up are gone: there are no accounts, and both
+                buttons navigated somewhere unrelated to their label. */}
+            <a
+              href="https://github.com/RahulH007/RazorPay_Buildathon"
+              target="_blank"
+              rel="noreferrer"
+              className="hidden items-center gap-1.5 text-sm font-semibold text-[var(--rzp-ink-muted)] transition-colors hover:text-[var(--rzp-blue-600)] sm:inline-flex"
             >
-              <Headphones size={20} strokeWidth={1.75} />
-            </button>
-
-            <button className="hidden items-center gap-1 text-[var(--rzp-ink-muted)] sm:flex cursor-pointer">
-              <span className="text-lg leading-none">🇮🇳</span>
-              <ChevronDown size={16} strokeWidth={2} />
-            </button>
+              <span>Source</span>
+              <ArrowUpRight size={14} strokeWidth={2.5} />
+            </a>
 
             <button
-              onClick={() => setActiveNav('overview')}
+              onClick={() => setActiveNav('docs')}
               className="rzp-btn-secondary hidden sm:inline-flex"
             >
-              Login
+              How it works
             </button>
 
             <button onClick={handleLaunchSimulator} className="rzp-btn-primary">
-              <span>Sign Up</span>
+              <span>Run demo</span>
               <ArrowRight size={15} strokeWidth={2.5} />
             </button>
           </div>
@@ -419,22 +432,28 @@ function App() {
                 <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                   {/* Hero Left Content */}
                   <div className="lg:col-span-7">
-                    <PillBadge 
-                      label="Engine v3.0 is Live" 
-                      linkLabel="View Docs →"
+                    <PillBadge
+                      label={
+                        metrics?.ledger?.entries
+                          ? `Chain verified · ${metrics.ledger.entries} entries`
+                          : 'Chain empty · run a batch'
+                      }
+                      linkLabel="How it works →"
                       onLinkClick={() => setActiveNav('docs')}
                     />
 
                     <h1 className="mt-4 text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.15]">
-                      <span className="text-[var(--rzp-ink)]">Autonomous Revenue Recovery</span>
+                      <span className="text-[var(--rzp-ink)]">Run the batch.</span>
                       <br />
                       <span className="text-[var(--rzp-blue-600)]">
-                        Engineered for Scale.
+                        Watch every decision get recorded.
                       </span>
                     </h1>
 
                     <p className="mt-4 text-sm sm:text-base leading-relaxed text-[var(--rzp-ink-muted)] max-w-xl">
-                      Detect failed Razorpay checkouts, diagnose root causes in &lt;18ms, re-engage customers via WhatsApp/Hinglish Voice, and eliminate churn — every rupee accounted for.
+                      Seeded payment failures move through diagnose, decide and act. Cards that stop
+                      carry the reason they stopped. Click any card to open its hash-chained audit
+                      trail, or pay one from the phone on the right.
                     </p>
 
                     <BatchControls
@@ -443,7 +462,6 @@ function App() {
                       progress={activeProgress}
                       onInspect={openLatestAudit}
                       onOptOut={handleOptOut}
-                      onBankOutage={handleBankOutage}
                       onFraudAlert={handleFraudAlert}
                     />
                   </div>
@@ -454,21 +472,41 @@ function App() {
                     
                     {/* Live Telemetry Mini Grid */}
                     <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl border border-slate-200 bg-white shadow-sm">
+                      {/* Every tile reads from the live batch. The four it
+                          replaced — "14.2ms avg", "₹4,990 Instant", "100%
+                          Immutable" — were hardcoded and did not move when a
+                          batch ran, which is the opposite of telemetry. Note
+                          the audit is hashed, not encrypted: it is meant to be
+                          readable and checkable, not secret. */}
                       <div className="p-2 rounded-xl bg-[#F8FAFC] border border-slate-100">
-                        <span className="text-[10px] font-mono text-[var(--rzp-ink-muted)] block">AI DIAGNOSIS</span>
-                        <span className="text-xs font-mono font-bold text-[var(--rzp-blue-600)]">14.2ms avg</span>
+                        <span className="text-[10px] font-mono text-[var(--rzp-ink-muted)] block">LEDGER ENTRIES</span>
+                        <span className="text-xs font-mono font-bold text-[var(--rzp-blue-600)]">
+                          {metrics?.ledger?.entries ?? '—'}
+                        </span>
                       </div>
                       <div className="p-2 rounded-xl bg-[#F8FAFC] border border-slate-100">
-                        <span className="text-[10px] font-mono text-[var(--rzp-ink-muted)] block">RECOVERED (UPI)</span>
-                        <span className="text-xs font-mono font-bold text-emerald-600">₹4,990 Instant</span>
+                        <span className="text-[10px] font-mono text-[var(--rzp-ink-muted)] block">RECOVERED</span>
+                        <span className="text-xs font-mono font-bold text-emerald-600">
+                          {metrics?.recovered_count != null
+                            ? `${metrics.recovered_count} of ${metrics.total_records}`
+                            : '—'}
+                        </span>
                       </div>
                       <div className="p-2 rounded-xl bg-[#F8FAFC] border border-slate-100">
-                        <span className="text-[10px] font-mono text-[var(--rzp-ink-muted)] block">ACTIVE CHANNELS</span>
-                        <span className="text-xs font-mono font-bold text-violet-600">WhatsApp / Voice</span>
+                        <span className="text-[10px] font-mono text-[var(--rzp-ink-muted)] block">CHANNEL SPEND</span>
+                        <span className="text-xs font-mono font-bold text-violet-600">
+                          {metrics?.total_channel_cost != null
+                            ? `₹${metrics.total_channel_cost.toFixed(2)}`
+                            : '—'}
+                        </span>
                       </div>
                       <div className="p-2 rounded-xl bg-[#F8FAFC] border border-slate-100">
-                        <span className="text-[10px] font-mono text-[var(--rzp-ink-muted)] block">ENCRYPTED AUDIT</span>
-                        <span className="text-xs font-mono font-bold text-[var(--rzp-blue-600)]">100% Immutable</span>
+                        <span className="text-[10px] font-mono text-[var(--rzp-ink-muted)] block">CHAIN HEAD</span>
+                        <span className="text-xs font-mono font-bold text-[var(--rzp-blue-600)]">
+                          {metrics?.ledger?.head_hash
+                            ? `${metrics.ledger.head_hash.slice(0, 10)}…`
+                            : '—'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -520,6 +558,11 @@ function App() {
                   processingId={processingId}
                   selectedRecordId={selectedRecordId}
                 />
+              </section>
+
+              {/* What Gemini read and returned, straight from the ledger. */}
+              <section>
+                <ModelInterpretations refreshKey={metrics} />
               </section>
 
               {/* Real-time Activity Ticker */}

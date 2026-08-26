@@ -26,7 +26,7 @@ export default function VoiceCallScreen({ record, onDTMF }) {
         window.speechSynthesis.speak(utterance);
       }
     } catch {
-      setScript(`Namaste ${record.customer_name} ji. RazorpayRecoveryEngine support se call hai. Aapki ₹${(record.amount/100).toLocaleString('en-IN')} ki payment incomplete reh gayi thi. Abhi payment karne ke liye 1 dabayein, delay karne ke liye 2 dabayein, ya opt out ke liye 9 dabayein.`);
+      setScript(`Namaste ${record.customer_name} ji. RecoverOS Merchant se call hai. Aapki ₹${(record.amount/100).toLocaleString('en-IN')} ki payment incomplete reh gayi thi. Abhi payment karne ke liye 1 dabayein, delay karne ke liye 2 dabayein, ya opt out ke liye 9 dabayein.`);
     }
   };
 

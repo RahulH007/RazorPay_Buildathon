@@ -12,10 +12,13 @@ export default function BentoCard({
   icon = 'zap', 
   iconColor = 'text-[var(--rzp-blue-600)]',
   iconBg = 'bg-blue-50 border-blue-200',
-  badgeLabel = '+24.8% Reclaimed',
-  badgeColor = 'bg-emerald-50 border-emerald-200 text-emerald-700',
-  title = 'Autonomous Fallback',
-  description = 'Dynamically reroutes failed subscription mandates through secondary payment methods and localized UPI payment links.',
+  // Defaults are deliberately inert. They used to read "+24.8% Reclaimed" on
+  // a card describing a feature that reroutes nothing, so any caller who
+  // forgot a prop silently shipped an invented benchmark.
+  badgeLabel = '',
+  badgeColor = 'bg-slate-50 border-slate-200 text-slate-600',
+  title = 'Untitled',
+  description = '',
   className = ''
 }) {
   const Icon = ICONS[icon] || Zap;
@@ -29,9 +32,11 @@ export default function BentoCard({
         <div className={`p-2.5 rounded-xl border ${iconBg} ${iconColor} transition-transform group-hover:scale-105 duration-200`}>
           <Icon className="w-5 h-5" strokeWidth={2} />
         </div>
-        <span className={`text-[11px] font-mono font-medium px-2.5 py-0.5 rounded-full border ${badgeColor}`}>
-          {badgeLabel}
-        </span>
+        {badgeLabel ? (
+          <span className={`text-[11px] font-mono font-medium px-2.5 py-0.5 rounded-full border ${badgeColor}`}>
+            {badgeLabel}
+          </span>
+        ) : null}
       </div>
       <h3 className="text-lg font-semibold text-[var(--rzp-ink)] mb-2 group-hover:text-[var(--rzp-blue-600)] transition-colors">{title}</h3>
       <p className="text-sm text-[var(--rzp-ink-muted)] leading-relaxed">{description}</p>

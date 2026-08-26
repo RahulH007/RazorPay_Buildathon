@@ -49,7 +49,7 @@ export default function ActivityTicker({ stateChange, isConnected }) {
 
       {events.length === 0 ? (
         <span className="truncate text-xs font-mono text-[#94A3B8]">
-          Listening to Razorpay recovery webhook pipeline — click &quot;Deploy RecoverOS Free&quot; to trigger batch flow
+          Waiting for state transitions — run a recovery batch to populate the stream
         </span>
       ) : (
         <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto custom-scrollbar py-1">

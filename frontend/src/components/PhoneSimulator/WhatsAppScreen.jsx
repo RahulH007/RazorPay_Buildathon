@@ -19,11 +19,11 @@ export default function WhatsAppScreen({ record, onPayClick }) {
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1">
-            <span className="text-xs font-semibold text-white truncate">RazorpayRecoveryEngine</span>
+            <span className="text-xs font-semibold text-white truncate">RecoverOS Merchant</span>
             <ShieldCheck size={13} className="text-emerald-400 shrink-0" />
           </div>
           <div className="text-[10px] text-emerald-400 flex items-center gap-1 font-sans">
-            <span>Verified Official Merchant</span>
+            <span>Business account</span>
           </div>
         </div>
       </div>

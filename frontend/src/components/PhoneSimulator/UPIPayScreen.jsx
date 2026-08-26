@@ -68,7 +68,7 @@ export default function UPIPayScreen({ record, onSettle }) {
 
         {/* Amount Box */}
         <div className="mt-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-center">
-          <div className="text-[11px] font-medium text-slate-500">Payable to RazorpayRecoveryEngine Merchant</div>
+          <div className="text-[11px] font-medium text-slate-500">Payable to RecoverOS Merchant</div>
           <div className="text-2xl font-black text-slate-900 font-mono mt-1">{amount}</div>
           <div className="text-[10px] text-slate-400 mt-1 font-mono">Order ref: {record.payment_id}</div>
         </div>

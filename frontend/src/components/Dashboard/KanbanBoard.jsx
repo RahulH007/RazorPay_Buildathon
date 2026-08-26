@@ -11,8 +11,12 @@ const COLUMNS = [
 
 function KanbanColumn({ col, cards, onCardClick, processingId, selectedRecordId }) {
   const Icon = col.icon;
+  // min-w-0 rather than a floor: at xl the phone rail takes 320px of the
+  // 1280px container, so five columns share ~890px. A 200px minimum made the
+  // grid wider than its box, which is what pushed the board under the phone.
+  // Cards inside already truncate, so they cope with the narrower column.
   return (
-    <div className="flex flex-col min-w-[200px] flex-1 rounded-2xl border border-slate-200 bg-white transition-all hover:border-blue-200 overflow-hidden shadow-sm">
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:border-blue-200">
       {/* Column header */}
       <div className="flex items-center justify-between px-3.5 py-3 border-b border-slate-100 bg-[#F8FAFC]">
         <div className="flex items-center gap-2">
@@ -90,7 +94,7 @@ export default function KanbanBoard({ records = [], onCardClick, processingId, s
       </div>
 
       {/* 5 Column Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 xl:gap-2">
         {COLUMNS.map((col) => (
           <KanbanColumn
             key={col.key}

@@ -5,7 +5,7 @@
 ### A revenue recovery agent that can prove what it did, what it spent, and why it stopped.
 
 [![Track](https://img.shields.io/badge/Razorpay%20Buildathon-Track%2003-2B6DEF?style=flat-square)](#)
-[![Tests](https://img.shields.io/badge/tests-133%20passing-12B76A?style=flat-square)](#tests)
+[![Tests](https://img.shields.io/badge/tests-134%20passing-12B76A?style=flat-square)](#tests)
 [![Deterministic](https://img.shields.io/badge/runs-byte--reproducible-12B76A?style=flat-square)](#verify-every-claim-in-60-seconds)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](#)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)](#)
@@ -68,7 +68,7 @@ python -m app.tools.run_demo         # seeded batch -> the receipt below
 python -m app.tools.verify_ledger    # walks the chain, exits non-zero if broken
 python -m app.tools.tamper_demo      # edits a cost in the DB, watch it get caught
 python -m app.tools.run_measurement  # incremental lift with a 95% CI
-python -m pytest tests/ -q           # 133 tests
+python -m pytest tests/ -q           # 134 tests
 ```
 
 <sub>A `Makefile` wraps these as `make demo`, `make verify-ledger`, `make tamper-demo`, `make measure`, `make test`, `make llm-activity`, `make refresh-llm-cache`. Python is the primary interface because `make` is absent from a default Windows install.</sub>
@@ -428,6 +428,7 @@ Every endpoint below exists. `curl` any of them against a running server.
 | `GET` | `/api/recovery/{payment_id}` | Record with audit trail |
 | `POST` | `/api/recovery/{payment_id}/opt-out` | Withdraw consent for this contact |
 | `POST` | `/api/recovery/{payment_id}/reply` | Inbound customer message; Gemini reads it, policy acts on it |
+| `POST` | `/api/recovery/{payment_id}/quarantine` | Halt on a fraud signal, recorded with `actor="system"` |
 | `POST` | `/api/recovery/{payment_id}/settle` | Simulate settlement |
 | `POST` | `/api/recovery/{payment_id}/dtmf` | Voice keypad response |
 | `GET` | `/api/voice/{payment_id}` | Hinglish voice script |
@@ -473,7 +474,7 @@ DATABASE_URL=sqlite:///./recoveros.db
 
 ## Tests
 
-**133 tests across 19 modules.**
+**134 tests across 19 modules.**
 
 ```bash
 cd backend && python -m pytest tests/ -q
@@ -518,7 +519,7 @@ backend/
                          refresh_llm_cache
   data/                  65-record dataset with stated counterfactuals
                          plus llm_cache.json, the recorded Gemini responses
-  tests/                 133 tests
+  tests/                 134 tests
 frontend/                React 19, Vite, Tailwind 4
 results/                 committed output from the commands above
 docs/                    architecture notes and screenshots

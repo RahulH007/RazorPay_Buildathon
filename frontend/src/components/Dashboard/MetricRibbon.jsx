@@ -36,7 +36,7 @@ function StatCard({ icon: Icon, tint, label, rawValue, format, sub }) {
         </span>
       </div>
 
-      <div className="mt-3 font-mono text-2xl font-extrabold tracking-tight text-[var(--rzp-ink)] group-hover:text-[var(--rzp-blue-600)] transition-colors">
+      <div className="mt-3 truncate font-mono text-xl font-extrabold tracking-tight text-[var(--rzp-ink)] transition-colors group-hover:text-[var(--rzp-blue-600)] 2xl:text-2xl">
         {format(animated)}
       </div>
 
@@ -59,14 +59,18 @@ export default function MetricRibbon({ metrics, totalRecords = 0 }) {
     recoveredCount > 0 ? channelCost / recoveredCount : (m.cost_per_recovery || 0);
   const countTotal = m.total_records || totalRecords || 0;
 
+  // Three across, two rows. Six across was a viewport-width decision, but the
+  // space that matters is the container: inside the Recovery tab the phone
+  // rail leaves ~870px, where six cards get ~140px each and clip both the
+  // value and its caption.
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       <StatCard icon={Landmark} tint="blue" label="Ingested GMV" rawValue={totalGmv} format={formatCurrency} sub={formatCurrencyFull(totalGmv)} />
       <StatCard icon={IndianRupee} tint="emerald" label="Recovered GMV" rawValue={recoveredGmv} format={formatCurrency} sub={formatCurrencyFull(recoveredGmv)} />
       <StatCard icon={Target} tint="cyan" label="Recovery Rate" rawValue={recoveryRate} format={formatPercent} sub={`${recoveredCount} of ${countTotal} records`} />
-      <StatCard icon={TrendingUp} tint="violet" label="Net ROI" rawValue={netRoi} format={formatINR} sub="Recovered − Spend" />
-      <StatCard icon={Wallet} tint="amber" label="Channel Cost" rawValue={channelCost} format={formatINR} sub="Multi-rail spend" />
-      <StatCard icon={ReceiptText} tint="blue" label="Cost / Recovery" rawValue={costPerRecovery} format={formatINR} sub="Avg per unit" />
+      <StatCard icon={TrendingUp} tint="violet" label="Net ROI" rawValue={netRoi} format={formatINR} sub="Recovered less spend" />
+      <StatCard icon={Wallet} tint="amber" label="Channel Cost" rawValue={channelCost} format={formatINR} sub="All channels" />
+      <StatCard icon={ReceiptText} tint="blue" label="Cost / Recovery" rawValue={costPerRecovery} format={formatINR} sub="Average" />
     </div>
   );
 }

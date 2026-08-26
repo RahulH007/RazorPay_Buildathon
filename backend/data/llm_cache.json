@@ -1,1 +1,322 @@
-{}
+{
+  "04f54c575ea256f5c0c7c3ee9c0c8537bf98c38bab11ae9e0da7de566d615aee": {
+    "input_tokens": 190,
+    "inputs": {
+      "amount_paise": 220000,
+      "customer_name": "Ritu Malhotra",
+      "error_reason": "authentication_failed",
+      "failure_class": "AUTH_FRICTION",
+      "link_url": "https://rzp.io/i/demo_22v1hI5j",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 11125,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 65,
+    "recorded_at": "2026-08-26T08:12:38.409009+00:00",
+    "text": "Hi Ritu Malhotra, bank authentication issue ki wajah se aapka ₹2,200.00 ka payment complete nahi ho paya. Kripya is link se payment retry kar lijiye: https://rzp.io/i/demo_22v1hI5j Thank you!"
+  },
+  "0ec362e5d0fe8e3c1ca91ee80ba55e6fe731741fdadf6e7342e81d040cfdf357": {
+    "input_tokens": 194,
+    "inputs": {
+      "amount_paise": 220000,
+      "customer_name": "Lakshmi Venkatesh",
+      "error_reason": "mandate_insufficient_funds",
+      "failure_class": "MANDATE_BALANCE",
+      "link_url": "https://rzp.io/i/demo_28b7nO2p",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 12544,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 67,
+    "recorded_at": "2026-08-26T08:14:06.386989+00:00",
+    "text": "Hi Lakshmi Venkatesh ji, aapka ₹2,200.00 ka payment account mein low balance ki wajah se fail ho gaya tha. Kripya niche diye link se payment complete kar lijiye: https://rzp.io/i/demo_28b7nO2p Thank you!"
+  },
+  "1e11cf801ab3becdf2f1c5572e8b7b519a39c7fd11ea58d8db94522b07abee54": {
+    "input_tokens": 189,
+    "inputs": {
+      "amount_paise": 160000,
+      "customer_name": "Bharati Yadav",
+      "error_reason": "card_expired",
+      "failure_class": "MANDATE_BALANCE",
+      "link_url": "https://rzp.io/i/demo_40n1zA5b",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 15640,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 64,
+    "recorded_at": "2026-08-26T08:16:46.626512+00:00",
+    "text": "Hi Bharati Yadav, aapka card expire hone ki wajah se ₹1,600.00 ka payment fail ho gaya tha. Kripya is link dwara payment complete kar lijiye: https://rzp.io/i/demo_40n1zA5b. Thank you!"
+  },
+  "2fd135d8f1c82ae87373d82d2a4288dc213d638c09c008281aee460a014ecd5f": {
+    "input_tokens": 239,
+    "inputs": {
+      "amount_paise": 180000,
+      "error_reason": "authentication_failed",
+      "payment_id": "pay_AF016p4bC8d",
+      "recovery_channel": "whatsapp_link",
+      "reply": "link bhejo, abhi kar deta hoon",
+      "task": "parse_reply"
+    },
+    "latency_ms": 15015,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 69,
+    "recorded_at": "2026-08-26T08:00:41.907670+00:00",
+    "text": "{\n  \"intent\": \"will_pay\",\n  \"confidence\": 0.98,\n  \"extracted_date\": null,\n  \"sentiment\": \"positive\",\n  \"requires_human\": false,\n  \"reasoning\": \"Customer requested the payment link and indicated immediate intent to pay.\"\n}"
+  },
+  "3207d1b5ce467647767e854acc812f59fb6c2735708382a179eae7038af39db2": {
+    "input_tokens": 190,
+    "inputs": {
+      "amount_paise": 450000,
+      "customer_name": "Ravi Mohan",
+      "error_reason": "card_expired",
+      "failure_class": "MANDATE_BALANCE",
+      "link_url": "https://rzp.io/i/demo_37k7wX2y",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 13383,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 67,
+    "recorded_at": "2026-08-26T08:16:13.321623+00:00",
+    "text": "Hi Ravi Mohan, aapka card expire hone ki wajah se ₹4,500.00 ka payment fail ho gaya hai. Kripya niche diye gaye link par click karke payment complete karein: https://rzp.io/i/demo_37k7wX2y. Thank you!"
+  },
+  "380af47db5620263e59d2d9cbc4d08a4aec3afc3c4aee218b81ccd485dbd5935": {
+    "input_tokens": 190,
+    "inputs": {
+      "amount_paise": 150000,
+      "customer_name": "Shalini Bhatt",
+      "error_reason": "authentication_failed",
+      "failure_class": "AUTH_FRICTION",
+      "link_url": "https://rzp.io/i/demo_18r6dE1f",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 17403,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 65,
+    "recorded_at": "2026-08-26T08:00:59.341722+00:00",
+    "text": "Hi Shalini Bhatt, bank verification fail hone ki wajah se aapka ₹1,500.00 ka payment complete nahi ho paya. Kripya is link se payment retry karein: https://rzp.io/i/demo_18r6dE1f. Thank you!"
+  },
+  "482bef21b2694851cb5fd24a6558d9618e220bf4b37b4d281b3eb56066520c13": {
+    "input_tokens": 195,
+    "inputs": {
+      "amount_paise": 400000,
+      "customer_name": "Harish Srinivasan",
+      "error_reason": "mandate_insufficient_funds",
+      "failure_class": "MANDATE_BALANCE",
+      "link_url": "https://rzp.io/i/demo_33g3sT7u",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 35161,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 70,
+    "recorded_at": "2026-08-26T08:15:10.214619+00:00",
+    "text": "Hi Harish Srinivasan, aapka ₹4,000.00 ka auto-debit account mein balance kam hone ki wajah se fail ho gaya. Please payment complete karne ke liye is link par click karein: https://rzp.io/i/demo_33g3sT7u. Thank you!"
+  },
+  "5f330b93fb5e082c5869faa3fb4a4f0fc319739f7bb52c417a7cfba6609bf84c": {
+    "input_tokens": 193,
+    "inputs": {
+      "amount_paise": 150000,
+      "customer_name": "Anita Sharma",
+      "error_reason": "mandate_insufficient_funds",
+      "failure_class": "MANDATE_BALANCE",
+      "link_url": "https://rzp.io/i/demo_30d9pQ4r",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 9498,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 70,
+    "recorded_at": "2026-08-26T08:14:15.926882+00:00",
+    "text": "Hi Anita Sharma, account mein balance kam hone ki wajah se aapka ₹1,500.00 ka auto-debit payment fail ho gaya hai. Kripya is link ke zariye payment complete kar dein: https://rzp.io/i/demo_30d9pQ4r. Thank you!"
+  },
+  "7fa9dd5bc3bef182a4c0d9a7839271b14d9e8576ae7a5a716d9a93bdee7cff81": {
+    "input_tokens": 189,
+    "inputs": {
+      "amount_paise": 350000,
+      "customer_name": "Manish Tiwari",
+      "error_reason": "incorrect_otp",
+      "failure_class": "AUTH_FRICTION",
+      "link_url": "https://rzp.io/i/demo_19s7eF2g",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 18440,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 66,
+    "recorded_at": "2026-08-26T08:01:17.862406+00:00",
+    "text": "Hi Manish Tiwari, galat OTP enter hone ki wajah se aapka ₹3,500.00 ka payment complete nahi ho paya. Please is link par click karke payment retry karein: https://rzp.io/i/demo_19s7eF2g. Thank you!"
+  },
+  "829ed16f6b61e8859a1fdbd0907f879199243b3371d3c0c696b49e36a1922395": {
+    "input_tokens": 191,
+    "inputs": {
+      "amount_paise": 180000,
+      "customer_name": "Kavita Saxena",
+      "error_reason": "authentication_failed",
+      "failure_class": "AUTH_FRICTION",
+      "link_url": "https://rzp.io/i/demo_16p4bC8d",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 19330,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 64,
+    "recorded_at": "2026-08-26T08:00:26.886215+00:00",
+    "text": "Hi Kavita Saxena, aapka ₹1,800.00 ka payment bank verification incomplete hone ki wajah se fail ho gaya tha. Please is link se payment complete kar lijiye: https://rzp.io/i/demo_16p4bC8d Thank you!"
+  },
+  "8814b6fcbb4b2cbd66472adbf3e9625d7d53aa60da0cf39d4edf7aa4bc710bba": {
+    "input_tokens": 190,
+    "inputs": {
+      "amount_paise": 510000,
+      "customer_name": "Prakash Jain",
+      "error_reason": "card_expired",
+      "failure_class": "MANDATE_BALANCE",
+      "link_url": "https://rzp.io/i/demo_31e1qR5s",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 10318,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 68,
+    "recorded_at": "2026-08-26T08:14:26.275820+00:00",
+    "text": "Hi Prakash Jain, aapka card expire hone ki wajah se ₹5,100.00 ka payment complete nahi ho paya. Kripya is link par click karke payment complete kar lijiye: https://rzp.io/i/demo_31e1qR5s. Thank you!"
+  },
+  "887ba8d62b7b4190575e22b46b0e8bf4114cadaf16c39909babb8a73bf61f351": {
+    "input_tokens": 194,
+    "inputs": {
+      "amount_paise": 320000,
+      "customer_name": "Padma Krishnan",
+      "error_reason": "mandate_insufficient_funds",
+      "failure_class": "MANDATE_BALANCE",
+      "link_url": "https://rzp.io/i/demo_36j6vW1x",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 32494,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 67,
+    "recorded_at": "2026-08-26T08:15:59.906029+00:00",
+    "text": "Hi Padma Krishnan, aapka ₹3,200.00 ka payment account mein low balance ki wajah se complete nahi ho paya. Kripya is link se payment poora kar lijiye: https://rzp.io/i/demo_36j6vW1x Thank you!"
+  },
+  "9171c4d1da2d2da1e5c2c86e3be60969075542000e4e6b4291012ca1400dfacc": {
+    "input_tokens": 189,
+    "inputs": {
+      "amount_paise": 500000,
+      "customer_name": "Aditya Rao",
+      "error_reason": "incorrect_otp",
+      "failure_class": "AUTH_FRICTION",
+      "link_url": "https://rzp.io/i/demo_21u9gH4i",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 9541,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 59,
+    "recorded_at": "2026-08-26T08:12:27.256733+00:00",
+    "text": "Hi Aditya Rao, incorrect OTP ki wajah se aapka ₹5,000.00 ka payment complete nahi ho paya. Please is link par click karke payment retry karein: https://rzp.io/i/demo_21u9gH4i"
+  },
+  "a775927ac0bdf0809a78dd5088638473e070f8e08ac0bd69aa7e9c880ff68612": {
+    "input_tokens": 194,
+    "inputs": {
+      "amount_paise": 280000,
+      "customer_name": "Rekha Banerjee",
+      "error_reason": "mandate_insufficient_funds",
+      "failure_class": "MANDATE_BALANCE",
+      "link_url": "https://rzp.io/i/demo_32f2rS6t",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 8714,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 64,
+    "recorded_at": "2026-08-26T08:14:35.024063+00:00",
+    "text": "Hi Rekha Banerjee, account me balance kam hone ki wajah se aapka ₹2,800.00 ka payment fail ho gaya hai. Please is link par click karke payment complete kar lijiye: https://rzp.io/i/demo_32f2rS6t"
+  },
+  "bd587fd795a169060977ba25c734930d00cd599d719463e8e31b1a88080e93a8": {
+    "input_tokens": 192,
+    "inputs": {
+      "amount_paise": 480000,
+      "customer_name": "Vijay Kulkarni",
+      "error_reason": "card_expired",
+      "failure_class": "MANDATE_BALANCE",
+      "link_url": "https://rzp.io/i/demo_27a6mN1o",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 29559,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 63,
+    "recorded_at": "2026-08-26T08:13:53.811883+00:00",
+    "text": "Hi Vijay Kulkarni, aapka card expire hone ki wajah se ₹4,800.00 ka payment fail ho gaya. Kripya niche diye gaye link se payment retry kar lijiye: https://rzp.io/i/demo_27a6mN1o"
+  },
+  "ce08f291e40d041221c78264f77f66321ad3b789c50831a41ebe4b606a3c4804": {
+    "input_tokens": 189,
+    "inputs": {
+      "amount_paise": 100000,
+      "customer_name": "Sanjay Mishra",
+      "error_reason": "authentication_failed",
+      "failure_class": "AUTH_FRICTION",
+      "link_url": "https://rzp.io/i/demo_23w2iJ6k",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 32638,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 67,
+    "recorded_at": "2026-08-26T08:13:11.079173+00:00",
+    "text": "Hi Sanjay Mishra, aapka ₹1,000.00 ka payment OTP authentication verify na hone ki wajah se fail ho gaya tha. Kripya is link par click karke payment retry karein: https://rzp.io/i/demo_23w2iJ6k. Thank you!"
+  },
+  "ddb03ed234d960b3c0576b37d45c293925faae8dcbaf7c0074f6aa13c2d7c45d": {
+    "input_tokens": 191,
+    "inputs": {
+      "amount_paise": 190000,
+      "customer_name": "Madhuri Desai",
+      "error_reason": "card_expired",
+      "failure_class": "MANDATE_BALANCE",
+      "link_url": "https://rzp.io/i/demo_34h4tU8v",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 17116,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 67,
+    "recorded_at": "2026-08-26T08:15:27.365702+00:00",
+    "text": "Hi Madhuri Desai, card expire hone ki wajah se aapka ₹1,900.00 ka payment complete nahi ho paya. Kripya niche diye gaye link se payment retry kar lein: https://rzp.io/i/demo_34h4tU8v. Thank you!"
+  },
+  "e48e89dee882f6b3a5f881f5e553f9c9ecf4118934dfeedca493db5ceeb12116": {
+    "input_tokens": 194,
+    "inputs": {
+      "amount_paise": 270000,
+      "customer_name": "Uma Maheshwari",
+      "error_reason": "mandate_insufficient_funds",
+      "failure_class": "MANDATE_BALANCE",
+      "link_url": "https://rzp.io/i/demo_38l8xY3z",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 17589,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 59,
+    "recorded_at": "2026-08-26T08:16:30.946785+00:00",
+    "text": "Hi Uma Maheshwari, account me low balance ki wajah se aapka ₹2,700.00 ka payment fail ho gaya. Kripya is link se payment complete karein: https://rzp.io/i/demo_38l8xY3z"
+  },
+  "ea61ceb85f8f3f517da08efeaa245b7b981175166eca01fcce1cb99886e5c7c4": {
+    "input_tokens": 190,
+    "inputs": {
+      "amount_paise": 390000,
+      "customer_name": "Geeta Pandey",
+      "error_reason": "incorrect_otp",
+      "failure_class": "AUTH_FRICTION",
+      "link_url": "https://rzp.io/i/demo_24x3jK7l",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 13073,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 66,
+    "recorded_at": "2026-08-26T08:13:24.196612+00:00",
+    "text": "Hi Geeta Pandey, galat OTP enter hone ki wajah se aapka ₹3,900.00 ka payment complete nahi ho paya. Kripya is link se payment retry karein: https://rzp.io/i/demo_24x3jK7l. Thank you!"
+  },
+  "f4cbbf3dc7eff331ae205572faca8c22e7a435238dc98cfcb2764bbb9ce1485f": {
+    "input_tokens": 191,
+    "inputs": {
+      "amount_paise": 280000,
+      "customer_name": "Divya Choudhary",
+      "error_reason": "authentication_failed",
+      "failure_class": "AUTH_FRICTION",
+      "link_url": "https://rzp.io/i/demo_20t8fG3h",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 24402,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 62,
+    "recorded_at": "2026-08-26T08:12:17.676011+00:00",
+    "text": "Hi Divya Choudhary, aapka ₹2,800.00 ka payment bank verification fail hone ki wajah se complete nahi hua. Kripya niche diye gaye link se payment retry karein: https://rzp.io/i/demo_20t8fG3h"
+  }
+}
