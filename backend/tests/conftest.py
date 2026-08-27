@@ -49,3 +49,31 @@ def payment_record():
         return PaymentFailureRecord(**values)
 
     return build
+
+
+# --- External API isolation -------------------------------------------------
+#
+# The suite must be safe even if someone sets DEMO_MODE=false and puts real
+# credentials in .env. Without this, running pytest in that configuration makes
+# real Gemini calls (observed: 429 RESOURCE_EXHAUSTED against the live quota)
+# and would create real Razorpay Payment Links.
+#
+# Both seams are blocked here rather than in individual test files, because the
+# guarantee has to hold for tests nobody remembered to guard.
+
+@pytest.fixture(autouse=True)
+def _no_external_apis(monkeypatch):
+    from app import llm_cache, razorpay_client
+
+    def refuse_client(source):
+        raise AssertionError(
+            f"pytest attempted a real Razorpay client (source={source!r}). "
+            f"Mock razorpay_client.create_payment_link in the test."
+        )
+
+    monkeypatch.setattr(razorpay_client, "get_client", refuse_client)
+
+    # Forces llm_cache onto the replay path, where a missing recording raises
+    # CacheMiss instead of calling Gemini. Individual tests may still set this
+    # themselves; they set the same value.
+    monkeypatch.setattr(llm_cache, "DEMO_MODE", True)

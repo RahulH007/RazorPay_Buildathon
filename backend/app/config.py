@@ -27,6 +27,23 @@ SARVAM_API_KEY = os.getenv("SARVAM_API_KEY", "XXXXXXXXXXXXXXXXXXXXXX")
 # --- Database ---
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./recoveros.db")
 
+# --- Public origin ---
+# Where a payer's browser and Razorpay's webhooks can actually reach this
+# service from the outside. The Payment Link callback was hardcoded to
+# localhost, which resolves to the payer's own machine rather than to us, so a
+# real customer paying on a phone landed nowhere. Configured rather than
+# constant because the value is deployment-specific and, on a free ngrok tier,
+# changes every time the tunnel restarts.
+#
+# The localhost default is deliberate: it keeps local development working, and
+# nothing outward-facing happens in demo mode anyway.
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8000").rstrip("/")
+
+# Where Razorpay returns the payer after a Payment Link is paid. Settlement
+# does NOT depend on this - that arrives on the signed webhook - so a stale
+# value degrades the payer's landing page, never the recovery itself.
+PAYMENT_LINK_CALLBACK_URL = f"{PUBLIC_BASE_URL}/api/webhooks/razorpay"
+
 # --- System Constants ---
 MAX_RETRIES = 3
 CAC_CEILING_PERCENT = 15  # Max recovery cost as % of invoice GMV

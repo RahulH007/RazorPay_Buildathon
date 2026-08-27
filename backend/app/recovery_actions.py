@@ -7,18 +7,43 @@ RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
 Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
+import inspect
 import uuid
 from datetime import datetime, timezone, timedelta
 
 from sqlalchemy.orm import Session
 
-from app.models import PaymentFailureRecord
+from app.models import PaymentFailureRecord, RazorpayPaymentLink
 from app.schemas import FailureClass
 from app.state_machine import transition_state, log_audit
 from app.consent import is_suppressed
 from app.llm_agent import generate_whatsapp_message
 from app.policy import ReasonCode, decide_next_action
-from app.config import CHANNEL_COSTS_PAISE, RECOVERY_CHANNELS, DEMO_MODE, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET
+from app.config import (
+    CHANNEL_COSTS_PAISE, RECOVERY_CHANNELS, DEMO_MODE,
+    RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET,
+    PAYMENT_LINK_CALLBACK_URL as _CONFIGURED_CALLBACK_URL,
+)
+from app import razorpay_client
+
+
+# Razorpay validates that expire_by is at least 15 minutes in the future. The
+# previous value was exactly 15, so any network or API latency between building
+# the payload and Razorpay evaluating it could push the stamp under the limit
+# and fail with "timestamp must be atleast 15 minutes in future". 30 minutes
+# leaves a margin that latency cannot erase.
+PAYMENT_LINK_EXPIRY_MINUTES = 30
+
+# Where Razorpay returns the payer after a successful link payment. Sourced
+# from config (PUBLIC_BASE_URL) rather than hardcoded: "localhost" resolves to
+# the payer's own device, not to this service.
+PAYMENT_LINK_CALLBACK_URL = _CONFIGURED_CALLBACK_URL
+
+
+def payment_link_expiry_epoch(now=None) -> int:
+    """Unix seconds for the link's expiry, PAYMENT_LINK_EXPIRY_MINUTES ahead."""
+    moment = now or datetime.now(timezone.utc)
+    return int((moment + timedelta(minutes=PAYMENT_LINK_EXPIRY_MINUTES)).timestamp())
 
 
 def _consent_blocked(db: Session, record: PaymentFailureRecord, channel: str):
@@ -50,7 +75,11 @@ def _consent_blocked(db: Session, record: PaymentFailureRecord, channel: str):
 
 # --- Action Implementations ---
 
-async def silent_retry(db: Session, record: PaymentFailureRecord) -> dict:
+async def silent_retry(
+    db: Session,
+    record: PaymentFailureRecord,
+    source: str = razorpay_client.SYNTHETIC_SOURCE,
+) -> dict:
     """
     Transient Technical: Check downtime status, retry when resolved.
     In demo mode: simulates downtime check and retry.
@@ -62,14 +91,16 @@ async def silent_retry(db: Session, record: PaymentFailureRecord) -> dict:
         "retry_scheduled": True,
     }
 
-    if not DEMO_MODE:
+    # Routed through the same gate as Payment Link creation. This previously
+    # built a client on `if not DEMO_MODE` alone, which meant a synthetic
+    # record could call Razorpay the moment demo mode was turned off - the
+    # exact hole the source gate exists to close.
+    if razorpay_client.is_configured(source):
         try:
-            import razorpay
-            client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
-            downtimes = client.utility.fetch_payment_downtimes()
-            result["downtimes"] = downtimes
+            client = razorpay_client.get_client(source)
+            result["downtimes"] = client.utility.fetch_payment_downtimes()
         except Exception as e:
-            result["downtime_check_error"] = str(e)
+            result["downtime_check_error"] = f"{type(e).__name__}: {e}"
 
     log_audit(
         db, record,
@@ -82,9 +113,17 @@ async def silent_retry(db: Session, record: PaymentFailureRecord) -> dict:
     return result
 
 
-async def send_whatsapp_link(db: Session, record: PaymentFailureRecord) -> dict:
+async def send_whatsapp_link(
+    db: Session,
+    record: PaymentFailureRecord,
+    source: str = razorpay_client.SYNTHETIC_SOURCE,
+) -> dict:
     """
     Auth/Friction: Generate a Razorpay Payment Link and send via WhatsApp.
+
+    `source` defaults to synthetic so every existing caller keeps working and
+    stays off the network. Only a record ingested from a signed Razorpay
+    webhook carries "razorpay_webhook", and only that value opens the live path.
     """
     blocked = _consent_blocked(db, record, "whatsapp")
     if blocked:
@@ -100,26 +139,39 @@ async def send_whatsapp_link(db: Session, record: PaymentFailureRecord) -> dict:
             "email": record.customer_email or "",
         },
         "notify": {"sms": False, "email": False, "whatsapp": True},
-        "expire_by": int((datetime.now(timezone.utc) + timedelta(minutes=15)).timestamp()),
-        "callback_url": "http://localhost:8000/api/webhooks/razorpay",
+        "expire_by": payment_link_expiry_epoch(),
+        "callback_url": PAYMENT_LINK_CALLBACK_URL,
+        # Correlation metadata, not a trust anchor. It travels back inside the
+        # webhook body, so it is used to locate our own RazorpayPaymentLink row
+        # and never to decide on its own which record a payment settles.
+        "notes": {"recoveros_payment_id": record.payment_id},
     }
 
     result = {
         "action": "whatsapp_link",
         "payment_link_created": True,
         "link_url": f"https://rzp.io/i/demo_{record.payment_id[-8:]}",
-        "expiry_minutes": 15,
+        "expiry_minutes": PAYMENT_LINK_EXPIRY_MINUTES,
     }
 
-    if not DEMO_MODE:
+    # The live path is gated on source as well as DEMO_MODE, so the synthetic
+    # batch cannot reach the network even with real credentials loaded.
+    live_link = None
+    if razorpay_client.is_configured(source):
         try:
-            import razorpay
-            client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
-            link = client.payment_link.create(payment_link_data)
-            result["link_url"] = link.get("short_url", result["link_url"])
-            result["link_id"] = link.get("id")
+            live_link = razorpay_client.create_payment_link(source, payment_link_data)
+            result["link_url"] = live_link.get("short_url", result["link_url"])
+            result["link_id"] = live_link.get("id")
         except Exception as e:
-            result["error"] = str(e)
+            # A failed creation must leave nothing durable behind claiming a
+            # link exists, so live_link stays None and no correlation row is
+            # written below. The fallback demo URL is kept so the record still
+            # progresses, and the failure is surfaced rather than swallowed.
+            live_link = None
+            result["payment_link_created"] = False
+            result["error"] = f"{type(e).__name__}: {e}"
+            print(f"[ERROR] Razorpay Payment Link creation failed for "
+                  f"{record.payment_id}: {type(e).__name__}: {e}")
 
     message_text, llm_metadata, rejection = await generate_whatsapp_message(
         record, result["link_url"]
@@ -138,7 +190,7 @@ async def send_whatsapp_link(db: Session, record: PaymentFailureRecord) -> dict:
             llm_metadata=llm_metadata or None,
         )
 
-    log_audit(
+    action_entry = log_audit(
         db, record,
         action="WHATSAPP_LINK_SENT",
         actor="system",
@@ -147,6 +199,26 @@ async def send_whatsapp_link(db: Session, record: PaymentFailureRecord) -> dict:
         cost_paise=CHANNEL_COSTS_PAISE["AUTH_FRICTION"],
         llm_metadata=llm_metadata or None,
     )
+
+    # Correlation is persisted only for a link that Razorpay actually created.
+    # A demo placeholder URL gets no row: a row here asserts that a real link
+    # with this id exists at Razorpay, and settlement will trust it.
+    #
+    # Ordering matters. The ledger entry is written first so its entry_hash can
+    # be the recovery_action_id, which ties the link to the exact, tamper-
+    # evident record of the action that produced it.
+    if live_link and live_link.get("id"):
+        db.add(RazorpayPaymentLink(
+            payment_id=record.payment_id,
+            recovery_action_id=action_entry.entry_hash,
+            razorpay_payment_link_id=live_link["id"],
+            razorpay_payment_id=None,  # unknown until the link is paid
+            status="created",
+            amount=record.amount,
+            currency=record.currency or "INR",
+        ))
+        db.commit()
+        result["correlation_recorded"] = True
 
     return result
 
@@ -297,6 +369,7 @@ async def execute_recovery(
     record: PaymentFailureRecord,
     now=None,
     is_holdout: bool = False,
+    source: str = None,
 ) -> dict:
     """
     Run one policy-approved recovery step against this record.
@@ -305,7 +378,13 @@ async def execute_recovery(
     That keeps the decision (policy), the action (here), and the outcome
     (the simulator or a real webhook) separable, and means each attempt gets
     a fresh guard evaluation instead of one check at the start.
+
+    `source` decides whether an action may reach the live Razorpay API. It
+    defaults to the record's own source, so a caller that does not pass it
+    cannot accidentally upgrade a synthetic record to the live path - the
+    record itself carries where it came from.
     """
+    source = source or getattr(record, "source", None) or razorpay_client.SYNTHETIC_SOURCE
     decision = decide_next_action(db, record, now=now, is_holdout=is_holdout)
 
     if not decision.should_act:
@@ -354,7 +433,12 @@ async def execute_recovery(
             details=decision.reason,
         )
 
-    result = await action_fn(db, record)
+    # Only the actions that can reach Razorpay accept a source; the rest keep
+    # their existing two-argument signature.
+    if "source" in inspect.signature(action_fn).parameters:
+        result = await action_fn(db, record, source=source)
+    else:
+        result = await action_fn(db, record)
     result["payment_id"] = record.payment_id
     result["failure_class"] = record.failure_class
     result["decision"] = decision.to_dict()

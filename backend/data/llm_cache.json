@@ -15,6 +15,22 @@
     "recorded_at": "2026-08-26T08:12:38.409009+00:00",
     "text": "Hi Ritu Malhotra, bank authentication issue ki wajah se aapka ₹2,200.00 ka payment complete nahi ho paya. Kripya is link se payment retry kar lijiye: https://rzp.io/i/demo_22v1hI5j Thank you!"
   },
+  "0a19f068e87e2f613ff1c0b8b334b8d5d43cbec63080063d99ef883288f52a2f": {
+    "input_tokens": 294,
+    "inputs": {
+      "error_description": "Payment failed",
+      "error_reason": "payment_failed",
+      "error_source": "gateway",
+      "error_step": "payment_authorization",
+      "method": "card",
+      "task": "diagnose_failure"
+    },
+    "latency_ms": 8242,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 102,
+    "recorded_at": "2026-08-26T13:56:23.558055+00:00",
+    "text": "{\n  \"root_cause_class\": \"TRANSIENT_TECHNICAL\",\n  \"technical_explanation\": \"The payment gateway returned a generic authorization failure without specifying a specific customer decline reason or fraud signal. This typically indicates a momentary network or processing glitch at the gateway or acquirer level.\",\n  \"suggested_action\": \"Prompt the customer to retry the transaction after a brief delay or switch to an alternate payment method or gateway.\",\n  \"confidence\": 0.7\n}"
+  },
   "0ec362e5d0fe8e3c1ca91ee80ba55e6fe731741fdadf6e7342e81d040cfdf357": {
     "input_tokens": 194,
     "inputs": {
@@ -46,6 +62,22 @@
     "output_tokens": 64,
     "recorded_at": "2026-08-26T08:16:46.626512+00:00",
     "text": "Hi Bharati Yadav, aapka card expire hone ki wajah se ₹1,600.00 ka payment fail ho gaya tha. Kripya is link dwara payment complete kar lijiye: https://rzp.io/i/demo_40n1zA5b. Thank you!"
+  },
+  "27c81803af03cd470e81fb4b3f3ca85c4ac54413102defd0ff7c5b76eb194315": {
+    "input_tokens": 185,
+    "inputs": {
+      "amount_paise": 45000,
+      "customer_name": "RecoverOS Test Customer",
+      "error_reason": "authentication_failed",
+      "failure_class": "AUTH_FRICTION",
+      "link_url": "https://rzp.io/rzp/R2zMqDe",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 18752,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 61,
+    "recorded_at": "2026-08-26T13:35:53.287279+00:00",
+    "text": "Hi RecoverOS Test Customer, bank OTP verification complete na hone ki wajah se aapka ₹450.00 ka payment fail ho gaya. Kripya iss link par click karke retry karein: https://rzp.io/rzp/R2zMqDe Thank you!"
   },
   "2fd135d8f1c82ae87373d82d2a4288dc213d638c09c008281aee460a014ecd5f": {
     "input_tokens": 239,
@@ -94,6 +126,22 @@
     "output_tokens": 65,
     "recorded_at": "2026-08-26T08:00:59.341722+00:00",
     "text": "Hi Shalini Bhatt, bank verification fail hone ki wajah se aapka ₹1,500.00 ka payment complete nahi ho paya. Kripya is link se payment retry karein: https://rzp.io/i/demo_18r6dE1f. Thank you!"
+  },
+  "3958dc00024b763293b29c7302016a8ac9fe3c66f4878ca0e4be039b230ddd3d": {
+    "input_tokens": 185,
+    "inputs": {
+      "amount_paise": 45000,
+      "customer_name": "RecoverOS Test Customer",
+      "error_reason": "authentication_failed",
+      "failure_class": "AUTH_FRICTION",
+      "link_url": "https://rzp.io/rzp/ez0Notg3",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 7503,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 56,
+    "recorded_at": "2026-08-26T13:54:26.583453+00:00",
+    "text": "Hi RecoverOS Test Customer, aapka ₹450.00 ka payment bank verification complete na hone ki wajah se fail ho gaya. Kripya niche diye link se payment retry karein: https://rzp.io/rzp/ez0Notg3"
   },
   "482bef21b2694851cb5fd24a6558d9618e220bf4b37b4d281b3eb56066520c13": {
     "input_tokens": 195,
@@ -207,6 +255,22 @@
     "recorded_at": "2026-08-26T08:12:27.256733+00:00",
     "text": "Hi Aditya Rao, incorrect OTP ki wajah se aapka ₹5,000.00 ka payment complete nahi ho paya. Please is link par click karke payment retry karein: https://rzp.io/i/demo_21u9gH4i"
   },
+  "a4ccb7604ee4aeb2811fc748e162fcab357db58f10a5a1f0e1a1d66b56d61d16": {
+    "input_tokens": 184,
+    "inputs": {
+      "amount_paise": 45000,
+      "customer_name": "RecoverOS Test Customer",
+      "error_reason": "authentication_failed",
+      "failure_class": "AUTH_FRICTION",
+      "link_url": "https://rzp.io/rzp/VINw9HOP",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 8183,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 52,
+    "recorded_at": "2026-08-26T13:13:23.617347+00:00",
+    "text": "Hi RecoverOS Test Customer, bank authentication fail hone ke karan aapka ₹450.00 ka payment complete nahi ho paya. Please is link se payment retry karein: https://rzp.io/rzp/VINw9HOP"
+  },
   "a775927ac0bdf0809a78dd5088638473e070f8e08ac0bd69aa7e9c880ff68612": {
     "input_tokens": 194,
     "inputs": {
@@ -222,6 +286,54 @@
     "output_tokens": 64,
     "recorded_at": "2026-08-26T08:14:35.024063+00:00",
     "text": "Hi Rekha Banerjee, account me balance kam hone ki wajah se aapka ₹2,800.00 ka payment fail ho gaya hai. Please is link par click karke payment complete kar lijiye: https://rzp.io/i/demo_32f2rS6t"
+  },
+  "af5d2948981572525be19a372306aa97ba036b971f01bee9cd0fd6367c321498": {
+    "input_tokens": 306,
+    "inputs": {
+      "error_description": "Your payment has been cancelled. Try again or complete the payment later.",
+      "error_reason": "payment_cancelled",
+      "error_source": "customer",
+      "error_step": "payment_authentication",
+      "method": "card",
+      "task": "diagnose_failure"
+    },
+    "latency_ms": 5612,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 91,
+    "recorded_at": "2026-08-26T13:39:39.654469+00:00",
+    "text": "{\n  \"root_cause_class\": \"AUTH_FRICTION\",\n  \"technical_explanation\": \"The transaction was explicitly cancelled by the customer during the 3DS or OTP authentication phase of the card payment flow.\",\n  \"suggested_action\": \"Prompt the customer to re-initiate the payment and complete the authentication process, or select a different payment option.\",\n  \"confidence\": 0.95\n}"
+  },
+  "b4b33e03e8f9f3e18d3cf871b48f706843b4ef1629e9af1ae3d1b4151a8eb9a8": {
+    "input_tokens": 186,
+    "inputs": {
+      "amount_paise": 45000,
+      "customer_name": "RecoverOS Test Customer",
+      "error_reason": "authentication_failed",
+      "failure_class": "AUTH_FRICTION",
+      "link_url": "https://rzp.io/rzp/j2cpv3ar",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 6911,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 61,
+    "recorded_at": "2026-08-26T12:48:16.594423+00:00",
+    "text": "Hi RecoverOS Test Customer, security verification complete na hone ki wajah se aapka ₹450.00 ka payment fail ho gaya tha. Kripya is link se payment complete karein: https://rzp.io/rzp/j2cpv3ar - Thank you!"
+  },
+  "b855410f683c0d35e7290ee3a653401e7fff42bc4bfe0b8725839d6aed12c735": {
+    "input_tokens": 184,
+    "inputs": {
+      "amount_paise": 45000,
+      "customer_name": "RecoverOS Test Customer",
+      "error_reason": "authentication_failed",
+      "failure_class": "AUTH_FRICTION",
+      "link_url": "https://rzp.io/rzp/AivTLSz",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 15763,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 57,
+    "recorded_at": "2026-08-26T13:49:59.788505+00:00",
+    "text": "Hi RecoverOS Test Customer, aapka ₹450.00 ka payment bank authentication fail hone ki wajah se complete nahi hua. Kripya is link se dobara try karein: https://rzp.io/rzp/AivTLSz Thank you!"
   },
   "bd587fd795a169060977ba25c734930d00cd599d719463e8e31b1a88080e93a8": {
     "input_tokens": 192,
@@ -254,6 +366,22 @@
     "output_tokens": 67,
     "recorded_at": "2026-08-26T08:13:11.079173+00:00",
     "text": "Hi Sanjay Mishra, aapka ₹1,000.00 ka payment OTP authentication verify na hone ki wajah se fail ho gaya tha. Kripya is link par click karke payment retry karein: https://rzp.io/i/demo_23w2iJ6k. Thank you!"
+  },
+  "d86209e75761472e09b72f6cb2f99b28e5daa3ff83c893cb60fe63e58fdc4180": {
+    "input_tokens": 188,
+    "inputs": {
+      "amount_paise": 45000,
+      "customer_name": "RecoverOS Test Customer",
+      "error_reason": "authentication_failed",
+      "failure_class": "AUTH_FRICTION",
+      "link_url": "https://rzp.io/i/demo_486EB21C",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 6368,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 63,
+    "recorded_at": "2026-08-26T10:00:30.584575+00:00",
+    "text": "Hi RecoverOS Test Customer, aapka ₹450.00 ka payment bank authentication fail hone ki wajah se complete nahi ho paya. Kripya payment retry karne ke liye is link par click karein: https://rzp.io/i/demo_486EB21C"
   },
   "ddb03ed234d960b3c0576b37d45c293925faae8dcbaf7c0074f6aa13c2d7c45d": {
     "input_tokens": 191,

@@ -66,6 +66,11 @@ class PaymentFailureRecord(Base):
     # we trust - the attempt resumes automatically once the date passes.
     promise_to_pay_at = Column(DateTime, nullable=True)
 
+    # Where this record came from: "synthetic" for the seeded dataset,
+    # "razorpay_webhook" for a live signed payment.failed event. Only the
+    # latter may reach the real Razorpay API - see razorpay_client.
+    source = Column(String(30), nullable=False, default="synthetic", index=True)
+
     # Timestamps
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc),
@@ -161,6 +166,48 @@ class ConsentRecord(Base):
     source = Column(String(30), nullable=False)  # dtmf_9, whatsapp_reply, api, merchant_upload
     payment_id = Column(String(50), nullable=True)
     recorded_at_us = Column(Integer, nullable=False)
+
+
+class RazorpayPaymentLink(Base):
+    """
+    A Payment Link this system created at Razorpay, and what became of it.
+
+    This table is the authoritative correlation record. The `notes` field on the
+    Razorpay link carries the same payment id, but notes are attacker-supplied
+    from our point of view - they arrive back inside a webhook body - so they
+    are a hint used to find this row, never the thing trusted to prove which
+    RecoverOS record a payment belongs to.
+
+    One RecoverOS payment may be chased more than once, so there is no single
+    pending link column on PaymentFailureRecord: each attempt is a row here.
+    """
+    __tablename__ = "razorpay_payment_links"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    payment_id = Column(
+        String(50), ForeignKey("payment_failure_records.payment_id"),
+        nullable=False, index=True,
+    )
+
+    # The entry_hash of the WHATSAPP_LINK_SENT ledger entry that created this
+    # link. A hash rather than a row id: it ties the link to the exact,
+    # tamper-evident audit entry recording the action, so the correlation is
+    # only valid while that entry's content is unaltered.
+    recovery_action_id = Column(String(64), nullable=False, index=True)
+
+    razorpay_payment_link_id = Column(String(64), nullable=False, unique=True, index=True)
+
+    # Null until the link is actually paid. Populated at settlement (Step 2).
+    razorpay_payment_id = Column(String(64), nullable=True, index=True)
+
+    status = Column(String(20), nullable=False, default="created")  # created, paid
+    amount = Column(Integer, nullable=False)  # paise, matching PaymentFailureRecord
+    currency = Column(String(10), nullable=False, default="INR")
+
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc),
+                        onupdate=lambda: datetime.now(timezone.utc))
 
 
 class BatchRun(Base):
