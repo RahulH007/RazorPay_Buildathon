@@ -68,6 +68,10 @@ def live_link_created(monkeypatch):
     monkeypatch.setattr(recovery_actions.razorpay_client, "is_configured",
                         lambda source: source == "razorpay_webhook")
     monkeypatch.setattr(recovery_actions.razorpay_client, "create_payment_link", fake_create)
+    # Pinned so these tests do not depend on the developer's PUBLIC_BASE_URL.
+    # Live link creation now refuses a loopback callback, and config defaults to
+    # localhost, so an unset environment would otherwise block every test here.
+    monkeypatch.setattr(recovery_actions, "PAYMENT_LINK_CALLBACK_URL", "https://tests.recoveros.example/api/webhooks/razorpay")
     return calls
 
 

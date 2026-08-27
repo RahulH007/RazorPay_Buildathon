@@ -47,6 +47,22 @@
     "recorded_at": "2026-08-26T08:14:06.386989+00:00",
     "text": "Hi Lakshmi Venkatesh ji, aapka ₹2,200.00 ka payment account mein low balance ki wajah se fail ho gaya tha. Kripya niche diye link se payment complete kar lijiye: https://rzp.io/i/demo_28b7nO2p Thank you!"
   },
+  "196446c4543bdd75b3cabd89430b7cfaf9ededc6c3bacbe39e56af7bf167f271": {
+    "input_tokens": 198,
+    "inputs": {
+      "amount_paise": 1875000,
+      "customer_name": "Sunrise Textiles Pvt Ltd",
+      "error_reason": "buyer_ap_cycle_pending",
+      "failure_class": "B2B_RECEIVABLE",
+      "link_url": "https://rzp.io/i/demo_5eB9r6Wx",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 10738,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 66,
+    "recorded_at": "2026-08-27T17:38:59.568035+00:00",
+    "text": "Hi Sunrise Textiles Pvt Ltd, AP cycle pending hone ki wajah se aapka ₹18,750.00 ka payment process nahi ho paya. Kripya is link se payment complete karein: https://rzp.io/i/demo_5eB9r6Wx. Thank you!"
+  },
   "1e11cf801ab3becdf2f1c5572e8b7b519a39c7fd11ea58d8db94522b07abee54": {
     "input_tokens": 189,
     "inputs": {
@@ -62,6 +78,22 @@
     "output_tokens": 64,
     "recorded_at": "2026-08-26T08:16:46.626512+00:00",
     "text": "Hi Bharati Yadav, aapka card expire hone ki wajah se ₹1,600.00 ka payment fail ho gaya tha. Kripya is link dwara payment complete kar lijiye: https://rzp.io/i/demo_40n1zA5b. Thank you!"
+  },
+  "2215ac68ca800873225cdad45b061bfe8978f623684f9be8cc9a348c117fea0d": {
+    "input_tokens": 198,
+    "inputs": {
+      "amount_paise": 500000,
+      "customer_name": "MediCare Digital",
+      "error_reason": "invoice_overdue_15d",
+      "failure_class": "B2B_RECEIVABLE",
+      "link_url": "https://rzp.io/i/demo_46t7fF2h",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 10908,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 67,
+    "recorded_at": "2026-08-27T17:06:40.029877+00:00",
+    "text": "Hi MediCare Digital, aapka ₹5,000.00 ka payment clear nahi hua hai kyunki invoice 15 days se overdue hai. Kripya is link se payment complete kar lein: https://rzp.io/i/demo_46t7fF2h. Thanks!"
   },
   "27c81803af03cd470e81fb4b3f3ca85c4ac54413102defd0ff7c5b76eb194315": {
     "input_tokens": 185,
@@ -143,6 +175,38 @@
     "recorded_at": "2026-08-26T13:54:26.583453+00:00",
     "text": "Hi RecoverOS Test Customer, aapka ₹450.00 ka payment bank verification complete na hone ki wajah se fail ho gaya. Kripya niche diye link se payment retry karein: https://rzp.io/rzp/ez0Notg3"
   },
+  "4162e61b97dffe2bbe80294c976b7d978fd945be63bd13df21cfbe82f79a3bb9": {
+    "input_tokens": 184,
+    "inputs": {
+      "amount_paise": 45000,
+      "customer_name": "Verification Customer",
+      "error_reason": "authentication_failed",
+      "failure_class": "AUTH_FRICTION",
+      "link_url": "https://rzp.io/rzp/oAGfiY6A",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 6900,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 60,
+    "recorded_at": "2026-08-27T14:57:28.622297+00:00",
+    "text": "Hi Verification Customer, aapka ₹450.00 ka payment bank verification complete na hone ki wajah se fail ho gaya tha. Kripya payment poora karne ke liye is link par click karein: https://rzp.io/rzp/oAGfiY6A"
+  },
+  "41eae01c05f1bf51309b862487a40b0d5b3e955f8ae79535a4195b8a6b7fd77d": {
+    "input_tokens": 314,
+    "inputs": {
+      "error_description": "Payer exceeded the permitted UPI PIN attempts and the session was locked by the PSP.",
+      "error_reason": "upi_pin_attempts_exhausted",
+      "error_source": "customer",
+      "error_step": "authentication",
+      "method": "upi",
+      "task": "diagnose_failure"
+    },
+    "latency_ms": 6783,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 99,
+    "recorded_at": "2026-08-27T17:40:48.288567+00:00",
+    "text": "{\n  \"root_cause_class\": \"AUTH_FRICTION\",\n  \"technical_explanation\": \"The payment failed because the customer entered an incorrect UPI PIN multiple times, causing the issuer bank/PSP to temporarily lock the authentication session.\",\n  \"suggested_action\": \"Instruct the customer to wait for the PSP lock period to expire or reset their UPI PIN via their UPI app before attempting the transaction again.\",\n  \"confidence\": 0.98\n}"
+  },
   "482bef21b2694851cb5fd24a6558d9618e220bf4b37b4d281b3eb56066520c13": {
     "input_tokens": 195,
     "inputs": {
@@ -159,6 +223,54 @@
     "recorded_at": "2026-08-26T08:15:10.214619+00:00",
     "text": "Hi Harish Srinivasan, aapka ₹4,000.00 ka auto-debit account mein balance kam hone ki wajah se fail ho gaya. Please payment complete karne ke liye is link par click karein: https://rzp.io/i/demo_33g3sT7u. Thank you!"
   },
+  "49f1a939881594cbdb3e5d6776e2e63e2eb8c2e9215c71f5e8ed6f6e21ef8e7f": {
+    "input_tokens": 193,
+    "inputs": {
+      "amount_paise": 890000,
+      "customer_name": "Meridian Supplies",
+      "error_reason": "invoice_overdue_15d",
+      "failure_class": "B2B_RECEIVABLE",
+      "link_url": "https://rzp.io/i/demo_01night1",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 9518,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 65,
+    "recorded_at": "2026-08-27T17:07:00.533470+00:00",
+    "text": "Hi Meridian Supplies, aapka payment complete nahi ho paya kyunki invoice 15 din se overdue hai. Please ₹8,900.00 ka payment clear karne ke liye is link par click karein: https://rzp.io/i/demo_01night1. Thank you!"
+  },
+  "54ba387c004996c5171081c00fe91475a158722f55ee3cef3387345d209754e0": {
+    "input_tokens": 195,
+    "inputs": {
+      "amount_paise": 960000,
+      "customer_name": "Meridian Logistics LLP",
+      "error_reason": "invoice_under_query",
+      "failure_class": "B2B_RECEIVABLE",
+      "link_url": "https://rzp.io/i/demo_6fC2s7Xy",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 6580,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 64,
+    "recorded_at": "2026-08-27T17:40:29.910852+00:00",
+    "text": "Hi Meridian Logistics LLP, invoice query me hone ke karan aapki payment complete nahi ho paayi. Kripya ₹9,600.00 ki payment is link se complete karein: https://rzp.io/i/demo_6fC2s7Xy. Thank you!"
+  },
+  "59481d6764a94818a5cc3bb97e97e90f22ac2372c737211c93425d92600933e6": {
+    "input_tokens": 198,
+    "inputs": {
+      "amount_paise": 1500000,
+      "customer_name": "DataPulse Analytics",
+      "error_reason": "invoice_overdue_15d",
+      "failure_class": "B2B_RECEIVABLE",
+      "link_url": "https://rzp.io/i/demo_43q4cC8e",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 7885,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 65,
+    "recorded_at": "2026-08-27T17:06:17.989544+00:00",
+    "text": "Hi DataPulse Analytics, aapka invoice 15 days overdue hone ki wajah se ₹15,000.00 ka payment pending hai. Please is link se payment complete kar lijiye: https://rzp.io/i/demo_43q4cC8e. Thank you!"
+  },
   "5f330b93fb5e082c5869faa3fb4a4f0fc319739f7bb52c417a7cfba6609bf84c": {
     "input_tokens": 193,
     "inputs": {
@@ -174,6 +286,54 @@
     "output_tokens": 70,
     "recorded_at": "2026-08-26T08:14:15.926882+00:00",
     "text": "Hi Anita Sharma, account mein balance kam hone ki wajah se aapka ₹1,500.00 ka auto-debit payment fail ho gaya hai. Kripya is link ke zariye payment complete kar dein: https://rzp.io/i/demo_30d9pQ4r. Thank you!"
+  },
+  "6a55fd33b9acc4bae4994d7184801503be2ea8db37fb4a914c991b491ff5d56a": {
+    "input_tokens": 199,
+    "inputs": {
+      "amount_paise": 980000,
+      "customer_name": "SwiftLogistics Co",
+      "error_reason": "invoice_overdue_15d",
+      "failure_class": "B2B_RECEIVABLE",
+      "link_url": "https://rzp.io/i/demo_45s6eE1g",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 10388,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 64,
+    "recorded_at": "2026-08-27T17:06:28.832560+00:00",
+    "text": "Hi SwiftLogistics Co, aapka ₹9,800.00 ka payment process nahi ho paya kyunki invoice 15 days overdue hai. Kripya is link se payment complete kar dein: https://rzp.io/i/demo_45s6eE1g"
+  },
+  "743e8e524106eb2c594213602b54bf9f39ca366af7ac784aa90ebcc3c640a8ca": {
+    "input_tokens": 190,
+    "inputs": {
+      "amount_paise": 1500,
+      "customer_name": "Anil Traders",
+      "error_reason": "invoice_overdue_15d",
+      "failure_class": "B2B_RECEIVABLE",
+      "link_url": "https://rzp.io/i/demo_02small3",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 9121,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 60,
+    "recorded_at": "2026-08-27T17:06:50.192907+00:00",
+    "text": "Hi Anil Traders, aapka invoice 15 din se overdue hone ki wajah se payment fail ho gaya tha. Kripya ₹15.00 ki payment complete karne ke liye is link par click karein: https://rzp.io/i/demo_02small3"
+  },
+  "77298379637cb6dc6d52c7857e80094a2eb202e9ac75bc1ca38928a4ba128343": {
+    "input_tokens": 315,
+    "inputs": {
+      "error_description": "Buyer has raised a query on line items and withheld payment pending clarification. Not a payment failure.",
+      "error_reason": "invoice_under_query",
+      "error_source": "internal",
+      "error_step": "payment_initiation",
+      "method": "netbanking",
+      "task": "diagnose_failure"
+    },
+    "latency_ms": 5224,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 97,
+    "recorded_at": "2026-08-27T17:40:23.306881+00:00",
+    "text": "{\n  \"root_cause_class\": \"B2B_RECEIVABLE\",\n  \"technical_explanation\": \"The payment was not processed because the buyer actively raised a dispute on the invoice line items and explicitly withheld payment.\",\n  \"suggested_action\": \"Route the issue to the accounts receivable or sales team to address the buyer's invoice query and re-initiate billing once resolved.\",\n  \"confidence\": 0.98\n}"
   },
   "7fa9dd5bc3bef182a4c0d9a7839271b14d9e8576ae7a5a716d9a93bdee7cff81": {
     "input_tokens": 189,
@@ -206,6 +366,22 @@
     "output_tokens": 64,
     "recorded_at": "2026-08-26T08:00:26.886215+00:00",
     "text": "Hi Kavita Saxena, aapka ₹1,800.00 ka payment bank verification incomplete hone ki wajah se fail ho gaya tha. Please is link se payment complete kar lijiye: https://rzp.io/i/demo_16p4bC8d Thank you!"
+  },
+  "87d6528e6081e18a7b481cd23af807c6b5f554cb27a4ae1d709deb447f023d65": {
+    "input_tokens": 312,
+    "inputs": {
+      "error_description": "Cardholder did not complete the 3D Secure challenge within the issuer window; session expired.",
+      "error_reason": "issuer_3ds_timeout",
+      "error_source": "bank",
+      "error_step": "authorization",
+      "method": "card",
+      "task": "diagnose_failure"
+    },
+    "latency_ms": 5660,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 96,
+    "recorded_at": "2026-08-27T17:07:12.599110+00:00",
+    "text": "{\n  \"root_cause_class\": \"AUTH_FRICTION\",\n  \"technical_explanation\": \"The cardholder timed out while attempting to complete the 3D Secure authentication challenge, causing the bank session to expire during authorization.\",\n  \"suggested_action\": \"Ask the customer to re-attempt the transaction and enter the OTP/3DS credentials before the session timeout window elapses.\",\n  \"confidence\": 0.98\n}"
   },
   "8814b6fcbb4b2cbd66472adbf3e9625d7d53aa60da0cf39d4edf7aa4bc710bba": {
     "input_tokens": 190,
@@ -254,6 +430,38 @@
     "output_tokens": 59,
     "recorded_at": "2026-08-26T08:12:27.256733+00:00",
     "text": "Hi Aditya Rao, incorrect OTP ki wajah se aapka ₹5,000.00 ka payment complete nahi ho paya. Please is link par click karke payment retry karein: https://rzp.io/i/demo_21u9gH4i"
+  },
+  "955517cce8bd47c486ce24e05edfd764c3642eda62d15ff4c9180ad9a70eab2e": {
+    "input_tokens": 198,
+    "inputs": {
+      "amount_paise": 850000,
+      "customer_name": "CloudNine Enterprises",
+      "error_reason": "invoice_overdue_15d",
+      "failure_class": "B2B_RECEIVABLE",
+      "link_url": "https://rzp.io/i/demo_42p3bB7d",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 9003,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 60,
+    "recorded_at": "2026-08-27T17:06:09.886887+00:00",
+    "text": "Hi CloudNine Enterprises, aapka ₹8,500.00 ka payment invoice 15 days overdue hone ki wajah se fail ho gaya. Please is link se payment complete kar dein: https://rzp.io/i/demo_42p3bB7d"
+  },
+  "9f8546afed828b450fecfbe1d863eed9640bcfb486d05d0ed621322e81e55bd3": {
+    "input_tokens": 316,
+    "inputs": {
+      "error_description": "The payer PSP did not respond to the collect request within the timeout. No debit occurred.",
+      "error_reason": "psp_handle_unreachable",
+      "error_source": "gateway",
+      "error_step": "payment_initiation",
+      "method": "upi",
+      "task": "diagnose_failure"
+    },
+    "latency_ms": 6072,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 100,
+    "recorded_at": "2026-08-27T17:38:37.279080+00:00",
+    "text": "{\n  \"root_cause_class\": \"TRANSIENT_TECHNICAL\",\n  \"technical_explanation\": \"The payer PSP (Payment Service Provider) failed to respond to the UPI collect request within the required timeout period. No funds were debited from the customer's account.\",\n  \"suggested_action\": \"Ask the user to retry the payment or re-send the UPI collect request after a short delay.\",\n  \"confidence\": 0.95\n}"
   },
   "a4ccb7604ee4aeb2811fc748e162fcab357db58f10a5a1f0e1a1d66b56d61d16": {
     "input_tokens": 184,
@@ -351,6 +559,22 @@
     "recorded_at": "2026-08-26T08:13:53.811883+00:00",
     "text": "Hi Vijay Kulkarni, aapka card expire hone ki wajah se ₹4,800.00 ka payment fail ho gaya. Kripya niche diye gaye link se payment retry kar lijiye: https://rzp.io/i/demo_27a6mN1o"
   },
+  "bf6910a363472e1811a6a53da42b61f428c0941de832d2200c7cee212ba3940f": {
+    "input_tokens": 320,
+    "inputs": {
+      "error_description": "Buyer accounts payable team has not released the invoice; payment run is fortnightly and this invoice missed the cycle.",
+      "error_reason": "buyer_ap_cycle_pending",
+      "error_source": "internal",
+      "error_step": "payment_initiation",
+      "method": "netbanking",
+      "task": "diagnose_failure"
+    },
+    "latency_ms": 4956,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 100,
+    "recorded_at": "2026-08-27T17:38:48.814306+00:00",
+    "text": "{\n  \"root_cause_class\": \"B2B_RECEIVABLE\",\n  \"technical_explanation\": \"The payment was not initiated because the buyer's internal accounts payable team has not released the invoice, missing the current fortnightly payment run.\",\n  \"suggested_action\": \"Follow up with the buyer's accounts payable department to approve the invoice and ensure inclusion in their next scheduled payment cycle.\",\n  \"confidence\": 0.98\n}"
+  },
   "ce08f291e40d041221c78264f77f66321ad3b789c50831a41ebe4b606a3c4804": {
     "input_tokens": 189,
     "inputs": {
@@ -399,6 +623,38 @@
     "recorded_at": "2026-08-26T08:15:27.365702+00:00",
     "text": "Hi Madhuri Desai, card expire hone ki wajah se aapka ₹1,900.00 ka payment complete nahi ho paya. Kripya niche diye gaye link se payment retry kar lein: https://rzp.io/i/demo_34h4tU8v. Thank you!"
   },
+  "e17fb9e5b083ebe8e5ca10ebdc8a7f0110a4c85ab4c16f17fe65cc30c63301a7": {
+    "input_tokens": 313,
+    "inputs": {
+      "error_description": "Issuer placed a permanent risk hold on the instrument following a confirmed fraud report. Do not re-present.",
+      "error_reason": "issuer_risk_hold",
+      "error_source": "bank",
+      "error_step": "authorization",
+      "method": "card",
+      "task": "diagnose_failure"
+    },
+    "latency_ms": 4520,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 86,
+    "recorded_at": "2026-08-27T17:40:41.477872+00:00",
+    "text": "{\n  \"root_cause_class\": \"HARD_DECLINE\",\n  \"technical_explanation\": \"The issuing bank placed a permanent risk hold on the card during authorization following a confirmed fraud report.\",\n  \"suggested_action\": \"Do not attempt to retry the transaction. Inform the customer to contact their bank or use a different payment method.\",\n  \"confidence\": 0.99\n}"
+  },
+  "e2c28f61bb4e10138327e2103a4da3702ad7e7f0007f0dca11e4dfce2f7f60ba": {
+    "input_tokens": 329,
+    "inputs": {
+      "error_description": "Mandate presented on the 5th but payer account balance was short at presentation time. Re-presentation permitted after 3 days.",
+      "error_reason": "npci_mandate_presentation_declined",
+      "error_source": "bank",
+      "error_step": "payment_initiation",
+      "method": "emandate",
+      "task": "diagnose_failure"
+    },
+    "latency_ms": 5548,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 100,
+    "recorded_at": "2026-08-27T17:07:06.635429+00:00",
+    "text": "{\n  \"root_cause_class\": \"MANDATE_BALANCE\",\n  \"technical_explanation\": \"The e-mandate debit presentation was declined by the issuing bank due to insufficient funds in the customer's account at the time of processing.\",\n  \"suggested_action\": \"Notify the customer to ensure adequate account balance and schedule a mandate re-presentation after the required 3-day waiting period.\",\n  \"confidence\": 0.95\n}"
+  },
   "e48e89dee882f6b3a5f881f5e553f9c9ecf4118934dfeedca493db5ceeb12116": {
     "input_tokens": 194,
     "inputs": {
@@ -430,6 +686,70 @@
     "output_tokens": 66,
     "recorded_at": "2026-08-26T08:13:24.196612+00:00",
     "text": "Hi Geeta Pandey, galat OTP enter hone ki wajah se aapka ₹3,900.00 ka payment complete nahi ho paya. Kripya is link se payment retry karein: https://rzp.io/i/demo_24x3jK7l. Thank you!"
+  },
+  "ed6e2085e160624d2b598d10d85bcb8b0d1714e5d7df86c692bdda53ddf97389": {
+    "input_tokens": 190,
+    "inputs": {
+      "amount_paise": 89900,
+      "customer_name": "Deepak Sethi",
+      "error_reason": "issuer_3ds_timeout",
+      "failure_class": "AUTH_FRICTION",
+      "link_url": "https://rzp.io/i/demo_2bY7n4Rp",
+      "task": "whatsapp_message"
+    },
+    "latency_ms": 10947,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 66,
+    "recorded_at": "2026-08-27T17:38:30.686451+00:00",
+    "text": "Hi Deepak Sethi, bank OTP verification timeout hone ki wajah se aapka ₹899.00 ka payment complete nahi ho paya. Kripya is link par click karke payment poora karein: https://rzp.io/i/demo_2bY7n4Rp Thank you!"
+  },
+  "edeb18c599accbc4fce86e16a37902148b9a8020b6fa1b1b3d0f0bab33e9a5ae": {
+    "input_tokens": 242,
+    "inputs": {
+      "amount_paise": 960000,
+      "error_reason": "invoice_under_query",
+      "payment_id": "pay_LLM06fC2s7Xy",
+      "recovery_channel": "hinglish_voice",
+      "reply": "amount galat hai, invoice check karo",
+      "task": "parse_reply"
+    },
+    "latency_ms": 6525,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 74,
+    "recorded_at": "2026-08-27T17:40:36.445024+00:00",
+    "text": "{\n  \"intent\": \"dispute\",\n  \"confidence\": 0.95,\n  \"extracted_date\": null,\n  \"sentiment\": \"negative\",\n  \"requires_human\": true,\n  \"reasoning\": \"Customer states the billed amount is incorrect and requests an invoice check, indicating a billing dispute.\"\n}"
+  },
+  "eea5084c5ddc06f8bc88e67003f0d9bab5d2a79f2c78722ccb545555fd71ee04": {
+    "input_tokens": 317,
+    "inputs": {
+      "error_description": "Bank core banking system was in its nightly batch window and rejected the request. Transient by nature.",
+      "error_reason": "core_banking_batch_window",
+      "error_source": "bank",
+      "error_step": "payment_initiation",
+      "method": "netbanking",
+      "task": "diagnose_failure"
+    },
+    "latency_ms": 6010,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 106,
+    "recorded_at": "2026-08-27T17:38:43.606823+00:00",
+    "text": "{\n  \"root_cause_class\": \"TRANSIENT_TECHNICAL\",\n  \"technical_explanation\": \"The issuing bank's Core Banking Solution (CBS) was undergoing its scheduled nightly batch processing during payment initiation, resulting in a temporary rejection.\",\n  \"suggested_action\": \"Retry the transaction automatically after the batch processing window completes (typically 15-30 minutes) or suggest the customer use a different bank/payment method.\",\n  \"confidence\": 0.98\n}"
+  },
+  "f2a32f27eb13afae55a2cbc3eaa405da17a45e102496b4b2922c13f79d7fac71": {
+    "input_tokens": 248,
+    "inputs": {
+      "amount_paise": 1875000,
+      "error_reason": "buyer_ap_cycle_pending",
+      "payment_id": "pay_LLM05eB9r6Wx",
+      "recovery_channel": "hinglish_voice",
+      "reply": "accounts team ko bola hai, 1st ko release hoga",
+      "task": "parse_reply"
+    },
+    "latency_ms": 8436,
+    "model": "gemini-3.6-flash",
+    "output_tokens": 74,
+    "recorded_at": "2026-08-27T17:39:08.012161+00:00",
+    "text": "{\n  \"intent\": \"will_pay\",\n  \"confidence\": 0.95,\n  \"extracted_date\": null,\n  \"sentiment\": \"neutral\",\n  \"requires_human\": false,\n  \"reasoning\": \"Customer confirmed they instructed their accounts team to release the payment on the 1st.\"\n}"
   },
   "f4cbbf3dc7eff331ae205572faca8c22e7a435238dc98cfcb2764bbb9ce1485f": {
     "input_tokens": 191,

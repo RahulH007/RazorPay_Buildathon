@@ -3,6 +3,12 @@ uvicorn[standard]==0.30.0
 sqlalchemy==2.0.32
 pydantic==2.8.0
 razorpay==1.4.2
+# razorpay 1.4.2 does `import pkg_resources` at module scope, which ships with
+# setuptools. Python 3.12 stopped seeding setuptools into new venvs, so on 3.12+
+# the SDK fails to import at all unless it is installed explicitly. Pinned below
+# 81 because setuptools plans to remove pkg_resources, and the SDK has no other
+# way to read its own version for the User-Agent header.
+setuptools<81
 google-genai==1.5.0
 python-dotenv==1.0.1
 httpx>=0.28.1

@@ -73,6 +73,42 @@ def _consent_blocked(db: Session, record: PaymentFailureRecord, channel: str):
     }
 
 
+def _loopback_callback_blocked(db: Session, record: PaymentFailureRecord, callback):
+    """
+    Refuse a live Payment Link whose callback nobody outside this machine can
+    reach. Returns a result dict when blocked, or None when it may proceed.
+
+    Shaped like _consent_blocked on purpose: both are refusals that happen
+    inside the action rather than at the policy boundary, and both must leave
+    the ledger explaining a silence a reviewer would otherwise have to guess at.
+    """
+    if not razorpay_client.callback_is_loopback(callback):
+        return None
+
+    log_audit(
+        db, record,
+        action="LIVE_LINK_BLOCKED_LOOPBACK_CALLBACK",
+        actor="system",
+        details=(
+            f"WHY_WE_DIDNT_ACT: refused to create a live Razorpay Payment Link "
+            f"because callback_url={callback!r} names a loopback host. A payer "
+            f"redirected there lands on their own device, not on this service, "
+            f"so the link would look valid and strand whoever paid it. No link "
+            f"was created, no message was sent and nothing was spent. Set "
+            f"PUBLIC_BASE_URL to a publicly reachable host and retry."
+        ),
+        cost_paise=0,
+    )
+
+    return {
+        "action": "blocked",
+        "reason": "loopback_callback_url",
+        "callback_url": callback,
+        "payment_link_created": False,
+        "customer_contacted": False,
+    }
+
+
 # --- Action Implementations ---
 
 async def silent_retry(
@@ -158,6 +194,18 @@ async def send_whatsapp_link(
     # batch cannot reach the network even with real credentials loaded.
     live_link = None
     if razorpay_client.is_configured(source):
+        # Fail closed before the API call, not after it. A live link whose
+        # callback is loopback strands the payer on their own device, and once
+        # Razorpay has created it the damage is a real URL that can be sent to a
+        # real person. Refusing here means no link exists to send, so the action
+        # stops rather than falling back to a demo URL a live customer would be
+        # given as if it were genuine.
+        blocked = _loopback_callback_blocked(
+            db, record, payment_link_data.get("callback_url")
+        )
+        if blocked:
+            return blocked
+
         try:
             live_link = razorpay_client.create_payment_link(source, payment_link_data)
             result["link_url"] = live_link.get("short_url", result["link_url"])

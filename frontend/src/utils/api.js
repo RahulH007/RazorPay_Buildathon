@@ -39,6 +39,10 @@ export const api = {
   // Audit
   getAudit: (paymentId) => apiFetch(`/api/audit/${paymentId}`),
 
+  // Ledger — the one trust claim that can be re-checked live rather than
+  // asserted. Walks the whole chain and recomputes every hash.
+  verifyLedger: () => apiFetch('/api/ledger/verify'),
+
   // LLM activity
   getLlmActivity: () => apiFetch('/api/llm/activity'),
 

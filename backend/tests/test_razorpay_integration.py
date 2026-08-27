@@ -53,6 +53,9 @@ def live_credentials(monkeypatch):
     monkeypatch.setattr(razorpay_client, "DEMO_MODE", False)
     monkeypatch.setattr(razorpay_client, "RAZORPAY_KEY_ID", REAL_KEY)
     monkeypatch.setattr(razorpay_client, "RAZORPAY_KEY_SECRET", REAL_SECRET)
+    # Live creation refuses a loopback callback and config defaults to one, so
+    # pin a public value rather than inherit the developer's PUBLIC_BASE_URL.
+    monkeypatch.setattr(recovery_actions, "PAYMENT_LINK_CALLBACK_URL", "https://tests.recoveros.example/api/webhooks/razorpay")
 
 
 def payment_failed_payload(**overrides):

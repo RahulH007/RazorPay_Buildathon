@@ -307,14 +307,41 @@ Channel spend is small because messaging in India is cheap relative to the payme
 | Classification, holdout assignment, lift arithmetic | **Real** — deterministic and stratified |
 | Customer outcomes | *Simulated* — each record carries a stated counterfactual |
 | WhatsApp sends, voice calls, TTS | *Simulated* — nothing leaves the machine |
-| Razorpay payment links and settlement webhooks | *Not wired* — see below |
+| Razorpay payment links and settlement webhooks | **Real** — Test Mode, end to end; see [Live Razorpay evidence](#live-razorpay-evidence) |
 | Gemini diagnosis, reply reading, message writing | **Real** — recorded responses, replayed deterministically |
+
+### Live Razorpay evidence
+
+The whole loop has been run against Razorpay Test Mode, not described. One
+payment, end to end, every id verifiable against the account:
+
+```
+signed payment.failed  pay_LIVE4E4D1A964440   Rs 450.00, authentication_failed
+  -> CLASSIFIED_AUTH_FRICTION      rule_engine    (no model call)
+  -> STATE_DIAGNOSED_TO_INTERVENING policy_engine  attempt 1 of 2, 50p of a 6750p ceiling
+  -> WHATSAPP_LINK_SENT            50p            https://rzp.io/rzp/oAGfiY6A
+  -> Payment Link plink_TUppWD0wkTH8ka created at Razorpay
+     notes.recoveros_payment_id = pay_LIVE4E4D1A964440
+  -> paid in Test Mode -> new payment pay_TUprzIZ27o4lR6, captured
+  -> signed payment_link.paid -> STATE_INTERVENING_TO_RECOVERED
+```
+
+Razorpay delivered three events for that payment inside three seconds —
+`payment.authorized`, then `payment.captured` (carrying the *new* payment id and
+no link id, so it settles nothing), then `payment_link.paid`. The ledger holds
+exactly one recovery transition. Correlation runs through the
+`RazorpayPaymentLink` row this system wrote when it created the link, never
+through amount, timing, or a payment id in the webhook body.
+
+Six real Payment Links have been created across these runs. Signature
+verification fails closed outside demo mode, and a live link whose `callback_url`
+is a loopback host is refused before the API call and the refusal is ledgered.
 
 ### Not built yet
 
 Stated plainly, because a reviewer will find these anyway.
 
-- **The live Razorpay loop is not implemented.** `verify_webhook_signature` returns `True` when the webhook secret is unset — fail-open. `payment.failed` is acknowledged but not ingested. Settlement matches on `payment_id`, but Razorpay's `payment.captured` carries the *new* payment's id, so nothing would match until link creation passes `notes={"recoveros_payment_id": ...}`. Known and specified, not overlooked.
+- **Customer messaging is still simulated.** The Payment Link is real and payable; the WhatsApp message carrying it is not sent. Nothing leaves the machine to a customer.
 - **Demo mode replays recorded Gemini responses rather than calling the API.** This is deliberate and it is explained in full under [How Gemini is used](#how-gemini-is-used). The short version: a live model returns different text and a different latency every time, and both land in the hash preimage, so a demo that called Gemini directly could never reproduce its own head hash. `DEMO_MODE=false` makes real calls.
 - **The recorded cache ships empty in this checkout.** Until `make refresh-llm-cache` is run once with a real key, the AI figures in the receipt above are zero and every generated message falls back to its template.
 - **SQLite, single node.** WAL and a busy timeout are configured; production needs Postgres and a database-level sequence.

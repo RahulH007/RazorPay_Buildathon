@@ -17,6 +17,15 @@ from sqlalchemy import func
 router = APIRouter()
 
 
+def _ledger_summary(db) -> dict:
+    """The ledger head, shaped identically for both branches below."""
+    head = ledger.get_head(db)
+    return {
+        "head_hash": head.entry_hash if head else None,
+        "entries": (head.sequence_no + 1) if head else 0,
+    }
+
+
 @router.get("/metrics/dashboard")
 async def get_dashboard_metrics():
     """
@@ -45,23 +54,34 @@ async def get_dashboard_metrics():
                 "failed_count": 0,
                 "in_progress_count": 0,
                 "class_breakdown": [],
+                # These were copied from the populated branch below and left
+                # referencing its locals - `treated`, `control`, `treated_rate`
+                # and the rest are computed about 110 lines further down, so
+                # this branch raised UnboundLocalError and the endpoint answered
+                # 500 on any database with no records. A fresh clone, or `make
+                # clean` followed by opening the dashboard, hit it every time.
+                # It survived because nothing called this function: both
+                # "exactly once" tests re-implemented the aggregation inline.
                 "lift": {
-                "treated_count": len(treated),
-                "control_count": len(control),
-                "treated_recovered": len(treated_recovered),
-                "control_recovered": len(control_recovered),
-                "treated_rate": round(treated_rate, 1),
-                "control_rate": round(control_rate, 1),
-                "lift_pp": round(treated_rate - control_rate, 1),
-                "merchant_margin_percent": MERCHANT_MARGIN_PERCENT,
-                # A batch this small cannot carry a causal claim; the demo
-                # shows mechanism, results/lift_analysis.md carries the number.
-                "sample_warning": (
-                    f"n={len(control)} controls - too small for a reliable "
-                    f"estimate. See results/lift_analysis.md."
-                ) if len(control) < 100 else None,
-            },
-            "ledger": {"head_hash": None, "entries": 0},
+                    "treated_count": 0,
+                    "control_count": 0,
+                    "treated_recovered": 0,
+                    "control_recovered": 0,
+                    "treated_rate": 0.0,
+                    "control_rate": 0.0,
+                    "lift_pp": 0.0,
+                    "merchant_margin_percent": MERCHANT_MARGIN_PERCENT,
+                    "sample_warning": (
+                        "n=0 controls - too small for a reliable estimate. "
+                        "See results/lift_analysis.md."
+                    ),
+                },
+                # Read the real head rather than assuming an empty chain. The
+                # ledger is append-only, so "no records" does not imply "no
+                # entries", and reporting zero here would disagree with
+                # verify_chain on exactly the database where someone is most
+                # likely to be checking.
+                "ledger": _ledger_summary(db),
                 "records": [],
             }
 
@@ -146,8 +166,6 @@ async def get_dashboard_metrics():
         treated_rate = len(treated_recovered) / len(treated) * 100 if treated else 0.0
         control_rate = len(control_recovered) / len(control) * 100 if control else 0.0
 
-        head = ledger.get_head(db)
-
         return {
             "total_records": total_records,
             "total_gmv": total_gmv,
@@ -179,10 +197,7 @@ async def get_dashboard_metrics():
                     f"estimate. See results/lift_analysis.md."
                 ) if len(control) < 100 else None,
             },
-            "ledger": {
-                "head_hash": head.entry_hash if head else None,
-                "entries": (head.sequence_no + 1) if head else 0,
-            },
+            "ledger": _ledger_summary(db),
             "records": records_list,
         }
     finally:
