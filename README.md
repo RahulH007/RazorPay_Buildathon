@@ -5,7 +5,7 @@
 ### A revenue recovery agent that can prove what it did, what it spent, and why it stopped.
 
 [![Track](https://img.shields.io/badge/Razorpay%20Buildathon-Track%2003-2B6DEF?style=flat-square)](#)
-[![Tests](https://img.shields.io/badge/tests-134%20passing-12B76A?style=flat-square)](#tests)
+[![Tests](https://img.shields.io/badge/tests-632%20passing-12B76A?style=flat-square)](#tests)
 [![Deterministic](https://img.shields.io/badge/runs-byte--reproducible-12B76A?style=flat-square)](#verify-every-claim-in-60-seconds)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](#)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)](#)
@@ -14,7 +14,7 @@
 
 <img src="docs/screenshots/hero.jpg" alt="RecoverOS dashboard" width="100%" />
 
-**[Verify the claims](#verify-every-claim-in-60-seconds)** · **[How it works](#how-it-works)** · **[Stopping rules](#the-stopping-rules)** · **[How Gemini is used](#how-gemini-is-used)** · **[Measurement](#measuring-money-honestly)** · **[What is not built](#not-built-yet)**
+**[Verify the claims](#verify-every-claim-in-60-seconds)** · **[The flow](#the-end-to-end-flow)** · **[AI vs policy](#ai-advises-policy-decides)** · **[Safety Guard](#the-safety-guard)** · **[ERV](#expected-recovery-value)** · **[Architecture](documentation/ARCHITECTURE.md)** · **[What is not built](#not-built-yet)**
 
 <sub>Original work of **Rahul Hongekar** · [github.com/RahulH007](https://github.com/RahulH007) · Razorpay Buildathon, Track 03 · see [NOTICE](NOTICE.md)</sub>
 
@@ -34,7 +34,9 @@ In India that last question is not a product question. It is a TRAI question, a 
 
 ---
 
-## Why this is worth building
+## Track 03: the problem, and this solution
+
+**Track 03 — AI Revenue Recovery.** *Find revenue that's slipping away and win it back.* The judging bar: **show measured money recovered across a batch, with compliant escalation, stopping rules, and an audit trail.**
 
 Payment success rates in India sit between **75% and 92%** depending on rail and platform — so 8 to 25 of every 100 attempted transactions drop. Industry estimates put the resulting merchant loss at roughly **₹25,000 crore (about $3bn) a year**.
 
@@ -47,11 +49,28 @@ Payment success rates in India sit between **75% and 92%** depending on rail and
 
 Two things follow, and they shape the whole design.
 
-**Most of that money is not equally recoverable.** Technical declines have a high natural recovery rate — the bank comes back, the customer retries. Chasing them aggressively spends real money on revenue that was already arriving. That is why this project measures against a holdout instead of reporting gross recovery.
+**Most of that money is not equally recoverable.** Technical declines have a high natural recovery rate — the bank comes back, the customer retries. Chasing them aggressively spends real money on revenue that was already arriving. That is why this project measures against a holdout instead of reporting gross recovery, and why every attempt is priced before it is made.
 
 **Recovery is a compliance surface, not just a growth lever.** Every recovery attempt is an outbound contact governed by TRAI and DLT consent rules. A system that recovers well but cannot show *when it stopped and why* is not deployable, whatever its recovery rate.
 
-<sub>The figures above are industry estimates, attributed where a source is named. **Every other number in this document was produced by a command in this repository** — see below.</sub>
+<sub>The figures above are industry estimates, attributed where a source is named. Everything else in this document is produced by a command in this repository.</sub>
+
+---
+
+## Key features
+
+| | |
+|---|---|
+| **Tamper-evident ledger** | Every action, refusal and rupee on a hash chain with UNIQUE `prev_hash`. Append-only in the ORM *and* in SQLite triggers. |
+| **Deterministic policy ladder** | Eleven reason codes. Escalation per failure class. Attempt cap, CAC ceiling, consent, quiet hours — every stop recorded. |
+| **AI advisory, zero execution authority** | The model diagnoses. It cannot name a channel, an amount, a state or an API call. Four independent mechanisms enforce that. |
+| **Safety Guard** | Thirteen checks at the single point every action must pass through. Re-derives channel and cost from code, not from what it is handed. |
+| **Expected Recovery Value** | Prices each candidate attempt against *observed* success on that channel, for that customer. Refuses at break-even. |
+| **Customer personalization** | Per-contact history: which channel actually recovered, which method they paid by, when they pay. Never invented — insufficient history says so. |
+| **Real Razorpay Test Mode** | Payment Links created, signed webhooks verified, settlement correlated through a row this system wrote. |
+| **Exactly-once under duplicates** | Atomic claims on state, links and attempts. Two workers on one record send one message. |
+| **Cohort-scoped economics** | Revenue, cost, ROI and lift computed over one named population — batch, live, or all. |
+| **Per-intervention attribution** | Which action recovered how much, at what cost, with what net return. |
 
 ---
 
@@ -64,18 +83,19 @@ python -m venv venv && venv/Scripts/activate    # macOS/Linux: source venv/bin/a
 pip install -r backend/requirements.txt
 cd backend
 
-python -m app.tools.run_demo         # seeded batch -> the receipt below
+python -m app.tools.run_demo         # seeded batch -> a receipt
 python -m app.tools.verify_ledger    # walks the chain, exits non-zero if broken
 python -m app.tools.tamper_demo      # edits a cost in the DB, watch it get caught
 python -m app.tools.run_measurement  # incremental lift with a 95% CI
-python -m pytest tests/ -q           # 134 tests
+python -m app.tools.run_tick --dry-run   # what the recovery loop would do next
+python -m pytest tests/ -q           # 632 tests
 ```
 
 <sub>A `Makefile` wraps these as `make demo`, `make verify-ledger`, `make tamper-demo`, `make measure`, `make test`, `make llm-activity`, `make refresh-llm-cache`. Python is the primary interface because `make` is absent from a default Windows install.</sub>
 
 ### `run_demo` — run it as often as you like, the output never changes
 
-Every figure below, **the ledger head hash included**, is identical on every run and every machine.
+`run_demo` builds its own throwaway database each time, so it never touches your working data. Every figure below, **the ledger head hash included**, is identical on every run and every machine.
 
 ```text
   Seed                : 20260825  (deterministic)
@@ -86,32 +106,59 @@ Every figure below, **the ledger head hash included**, is identical on every run
   Holdout             : 20% of contacts, never contacted
 ------------------------------------------------------------------------
   OUTCOME
-    treated           :  42 records,  20 recovered  (47.6%)
-    control           :  11 records,   0 recovered  (0.0%)
-    attributable      :  20 payments worth Rs 103,300.00
-    channel spend     : Rs 29.50
+    treated           :  48 records,  23 recovered  (47.9%)
+    control           :  12 records,   0 recovered  (0.0%)
+    attributable      :  23 payments worth Rs 106,191.00
+    channel spend     : Rs 31.50
 ------------------------------------------------------------------------
   WHY WE STOPPED
       1  RETRY_CAP_REACHED          2  CONSENT_WITHDRAWN
       1  CAC_CEILING                2  QUIET_HOURS_DEFERRED
-      1  NEGATIVE_EXPECTED_VALUE   12  HARD_DECLINE
+      1  NEGATIVE_EXPECTED_VALUE    5  HARD_DECLINE
       2  ESCALATED_TO_HUMAN        13  LADDER_EXHAUSTED
-     11  HOLDOUT_CONTROL
+     12  HOLDOUT_CONTROL            1  REPLY_DISPUTE
+      2  REPLY_WILL_PAY
 ------------------------------------------------------------------------
   AI ACTIVITY
-    model calls       : 0
-    classified by     : 57 rule engine / 0 llm agent
-    tokens in / out   : 0 / 0
-    mean latency      : 0 ms
-    copy rejected     : 35
+    model calls       : 56   (replayed from the recorded cache)
+    classified by     : 57 rule engine / 8 llm agent
+    tokens in / out   : 13012 / 4200
+    copy rejected     : 8
 ------------------------------------------------------------------------
   LEDGER
-    entries           : 470
+    entries           : 462
     chain             : VALID
-    head              : ad72a0677f3375f7dec0effb88e5774ba7f9af2d9dfa4c2c3000af34dfa59b6f
+    head              : d40aefe8d2bc79ff3c14e27c31f211375edc25edb26848c122baf70ea7462fa0
 ```
 
-<sub>The AI figures above are zero because `backend/data/llm_cache.json` is empty in this checkout: demo mode replays recorded Gemini responses and never invents one, so with nothing recorded, every model call is a miss and every generated message falls back to its deterministic template. Run `make refresh-llm-cache` once with a real `GEMINI_API_KEY` to populate it. See [How Gemini is used](#how-gemini-is-used).</sub>
+Read the receipt's `47.9%` carefully: that is the **treated** arm. Across the whole batch it is **23 of 65, 35.4%** — and the difference between those two numbers is the point of holding a control arm out at all.
+
+The full run is committed at [`results/demo_run.txt`](results/demo_run.txt).
+
+### The same batch, through the dashboard
+
+`GET /api/metrics/dashboard?scope=batch` over the demo database, which is where cost, ROI and per-channel attribution live:
+
+```text
+  total records        65            recovered            23  (35.4%)
+  total GMV            Rs 270,693.50 recovered GMV        Rs 106,191.00
+  intervention spend   Rs 31.50      net recovery         Rs 106,159.50
+  cost per recovery    Rs 1.36       arm coverage         60 with / 5 without
+
+  RECOVERY BY INTERVENTION
+  Intervention      Attempts  Recovered   Rate   Rs Recovered    Cost        Net Rs      ROI
+  silent_retry            23         13  92.9%   Rs 55,192.00      0p  Rs 55,192.00        -
+  whatsapp_link           35          6  20.0%   Rs 15,699.00   1750p  Rs 15,681.50     896x
+  human_queue              4          1  25.0%   Rs 15,000.00      0p  Rs 15,000.00        -
+  hinglish_voice           4          2  50.0%   Rs 14,800.00    800p  Rs 14,792.00   1,849x
+  upi_resequence          12          1   8.3%    Rs 5,500.00    600p   Rs 5,494.00     916x
+
+  spend accounted for: 3150p of 3150p (residual 0p) · 23 of 23 recoveries attributed
+```
+
+Two things worth reading twice. **Silent retry recovered the most money and cost nothing** — but it only ever runs on `TRANSIENT_TECHNICAL`, the class most likely to recover on its own, so that row is a selection effect and not a recommendation. And **every paisa is accounted for**: the per-channel costs and the headline cost are two independent walks of the ledger, and the residual between them is zero.
+
+<sub>These figures come from a `DEMO_MODE=true` run, which replays `backend/data/llm_cache.json` and makes no network call. Eight WhatsApp messages have no recorded response and fall back to their deterministic template — that is the `copy rejected` line, and it is why the run stays reproducible.</sub>
 
 ### `tamper_demo` — the part worth watching
 
@@ -128,192 +175,187 @@ It opens the SQLite file **directly, outside the application**, and changes a re
 
 It names the row, the payment, the action, and both hashes. The edit only got that far because the script drops its own append-only triggers first — with them in place, SQLite itself rejects the `UPDATE`.
 
-<sub>Captured output from all of the above is committed under [`results/`](results/), for reviewers who would rather not clone.</sub>
+---
+
+## The end-to-end flow
+
+```mermaid
+flowchart LR
+    A[Razorpay<br/>webhook] --> B[Diagnose<br/><i>rules, then model</i>]
+    B --> C[Advisory<br/><i>AI + customer context</i>]
+    C --> D[Policy<br/><i>deterministic ladder</i>]
+    D --> E[ERV<br/><i>economic gate</i>]
+    E --> F[Safety Guard<br/><i>authorization</i>]
+    F --> G[Recovery<br/><i>the action</i>]
+    G --> H[Settlement<br/><i>signed webhook</i>]
+    H --> I[Metrics + Ledger]
+
+    style C fill:#EFF6FF,stroke:#2B6DEF
+    style D fill:#ECFDF3,stroke:#12B76A
+    style E fill:#ECFDF3,stroke:#12B76A
+    style F fill:#FEF0C7,stroke:#F79009
+```
+
+Each arrow narrows what the next stage may do. Diagnosis produces a failure class and nothing else. The advisory produces a recommendation that can be ignored. Policy turns a class into a channel, an attempt number and a cost, from tables written in code. ERV asks whether that specific attempt is worth its cost. The guard re-derives channel and cost from those same tables and refuses anything that does not match. The executor performs exactly what it was authorised to perform.
+
+Full detail — every module, every check, every failure mode — is in **[documentation/ARCHITECTURE.md](documentation/ARCHITECTURE.md)**.
 
 ---
 
-## How it works
+## AI advises, policy decides
 
-```mermaid
-flowchart TD
-    A[Razorpay webhook<br/>or batch file] --> B[1 . Ingest]
-    B --> C[2 . Classify<br/><i>error code to failure class</i>]
-    C --> D{3 . Policy engine<br/><b>act, or refuse with a reason?</b>}
-    D -->|refuse| R[Reason code<br/>+ WHY_WE_DIDNT_ACT]
-    D -->|act| E[4 . Channel<br/><i>retry, WhatsApp, UPI, voice, human</i>]
-    E --> F[5 . Observe outcome]
-    F --> G[6 . Settle + record cost]
-    R --> L[(Hash-chained ledger)]
-    G --> L
-    B --> L
-    C --> L
+This is the distinction the whole design turns on.
 
-    style D fill:#EEF4FF,stroke:#2B6DEF,stroke-width:2px
-    style R fill:#FFFAEB,stroke:#F79009,stroke-width:2px
-    style L fill:#ECFDF3,stroke:#12B76A,stroke-width:2px
-```
+**What the model does.** It reads a bank error string the rule engine does not recognise and returns a failure class, an explanation, a suggested action and a confidence. It writes per-customer WhatsApp copy and Hinglish voice scripts. It reads inbound customer replies.
 
-Every step appends to the chain — **including step 3 when it refuses.**
+**What the model cannot do.** Name a channel. Name an amount. Move a state. Call an API. There is no parameter anywhere downstream through which such a thing could arrive.
 
-<table>
-<tr><td width="33%" valign="top">
+Four independent mechanisms, each separately tested:
 
-**Proof**
+1. **The model never names a channel.** It names one of five failure classes; the channel is looked up in `policy.ATTEMPT_LADDER`, a table a person wrote. `HARD_DECLINE`'s ladder is empty, so a compliance halt recommends nothing at all.
+2. **The advisory modules cannot import an executor.** `ai_advisor.py`, `customer_profile.py` and `erv.py` import no `recovery_actions`, no `razorpay_client`, no `voice_pipeline`, no `settlement`, no HTTP client. Enforced by tests that parse each module's own AST.
+3. **The Safety Guard refuses by type.** Its first check is `isinstance(decision, PolicyDecision)`. A recommendation — or the model's raw JSON handed over as a dict — is rejected before one field is read.
+4. **The executor never reads a recommendation.** A record whose advisory recommends `hinglish_voice` at 99% confidence still gets `whatsapp_link`, because that is what the ladder says. That exact case is a test.
 
-The audit trail is a SHA-256 hash chain, not a log table. Delete a row and sequence contiguity breaks. Edit a field and the content hash breaks.
+**The model can add a stop, never remove one.** Low confidence, unparseable output, or an invented sixth class all degrade to `HARD_DECLINE` — which has no ladder and therefore no possible action.
 
-</td><td width="33%" valign="top">
+**The model writes the words, never the numbers.** Every amount in generated copy must equal the record's amount and every link must be one we created; a failure sends the deterministic template and writes `LLM_OUTPUT_REJECTED` to the chain.
 
-**Restraint**
+### Why this customer, why this channel, why now
 
-Every refusal is a first-class ledger entry with a reason code. Nine of them fire in a normal run.
+The per-contact profile is arithmetic over that customer's own records — keyed on the normalized phone the consent registry already uses as identity, so `+91 98123-45678` and `9812345678` are one history. It reports which channel actually recovered money from them, which method they paid by, what keeps failing, and when past recoveries settled.
 
-</td><td width="33%" valign="top">
+**Nothing is invented.** Thresholds are named constants. One resolved payment is `thin`, not a preference. Three ignored WhatsApp links with no recovery names *no* effective channel — that is a habit of ours, not a preference of theirs. A new contact gets one line: *"No prior payments from this contact in this system."*
 
-**Attribution**
+The recommendation may name a channel the ladder will not use. When it does, the card says so and the executor follows the ladder — an advisory nobody can override is not an advisory.
 
-A 20% holdout is never contacted, so the reported number is lift, not gross.
+---
 
-</td></tr>
-</table>
+## The Safety Guard
+
+The single point every action must pass through, sitting between a policy decision and anything that can reach a customer, a bank, or Razorpay.
+
+Thirteen checks, first refusal wins: provenance, source, channel allowlist, classification, class/channel fit, state, unmapped live reason, held-for-review, diagnosis confidence, attempt limit, stale decision, cost mismatch, spend limit.
+
+It **re-derives** channel and cost from the same deterministic tables policy used rather than trusting what it is handed, and it deliberately does not import `recovery_actions` — the guard must not depend on the thing it guards.
+
+**A refusal is an outcome, not a silence.** It writes `SAFETY_GUARD_BLOCKED` (actor `safety_guard`, cost 0), makes no state transition, calls nothing, spends nothing, and leaves the record where it was so a person can pick it up.
+
+### Fail-closed behaviour
+
+| Failure | Behaviour |
+|---|---|
+| Missing or placeholder webhook secret | request **rejected** outside demo mode |
+| Live error code not in `RULE_MAP` | ingested, classified, **held** — no action, no spend |
+| Model call raises | escalated to a human; nothing invented to fill the gap |
+| Model output unparseable | zero confidence → `HARD_DECLINE` → empty ladder → no action |
+| Loopback callback URL | Payment Link **not created**; the action stops rather than sending a demo URL to a live customer |
+| Settlement amount or currency mismatch | held and ledgered; the record is unchanged |
+| Two workers on one record | one claim wins; the other sends nothing |
+
+The pattern throughout: the expensive mistake is contacting someone we should not have, or spending money we cannot account for. Every ambiguous case resolves toward doing nothing and writing down why.
 
 ---
 
 ## The stopping rules
 
-<img src="docs/screenshots/audit-inspector.jpg" alt="Audit Inspector showing sequence numbers, entry hashes and a policy refusal" width="100%" />
+Eleven reason codes, evaluated cheapest-and-most-fundamental first, first refusal wins — so the recorded reason is the deepest one rather than whichever was evaluated last.
 
-The policy engine decides whether to act at all. Refusals are written as `POLICY_DECLINED_<CODE>` with actor `policy_engine`.
-
-| Reason code | Fires when |
-|---|---|
-| `RETRY_CAP_REACHED` | Three attempts already made in this batch |
-| `CAC_CEILING` | The next action would push spend past 15% of the payment value |
-| `NEGATIVE_EXPECTED_VALUE` | The channel costs more than the expected margin recovered |
-| `CONSENT_WITHDRAWN` | This contact opted out — on this payment or any other |
-| `QUIET_HOURS_DEFERRED` | Voice calls are not placed 21:00–09:00 IST |
-| `PROMISE_TO_PAY_PENDING` | The customer stated a date; attempts pause until it passes |
-| `HARD_DECLINE` | Compliance-mandated halt; zero retries, zero outreach |
-| `HOLDOUT_CONTROL` | Assigned to the untreated control arm |
-| `LADDER_EXHAUSTED` | The escalation ladder for this class has no further step |
-| `ESCALATED_TO_HUMAN` | Handed to the accounts team; automation ends here |
-
-The explanations are specific, not codes. Verbatim from the ledger:
-
-> `whatsapp_link costs 50p but the expected margin recovered is only 40p (success rate 40% on Rs 5.00 at 20% margin). Contacting this customer destroys value.`
-
-> `Spending 50p on whatsapp_link would take total spend to 100p against a ceiling of 97p (15% of Rs 6.50). Not worth recovering at this price.`
-
-Two refusals deliberately leave the record **open** rather than closing it: `QUIET_HOURS_DEFERRED`, because the call still has to be placed when the window opens, and `HOLDOUT_CONTROL`, because a control is observed, not abandoned.
-
-<details>
-<summary><b>Escalation ladders — one class, several channels, cheap before expensive</b></summary>
-
-<br/>
-
-| Failure class | Ladder | Bound by |
-|---|---|---|
-| `TRANSIENT_TECHNICAL` | silent retry ×5 | Attempt cap — the channel is free, so nothing else stops it |
-| `AUTH_FRICTION` | WhatsApp → reminder | Ladder length |
-| `MANDATE_BALANCE` | UPI resequence → WhatsApp | Ladder length |
-| `B2B_RECEIVABLE` | WhatsApp → voice → human queue | Cost ceiling on small invoices |
-| `HARD_DECLINE` | none | Never contacted |
-
-The transient ladder is deliberately **longer** than the attempt cap so the cap is the rule that fires. A single-shot design can never reach a cap of three — which is exactly why `MAX_RETRIES` was unreachable before this layer existed.
-
-</details>
-
----
-
-## How Gemini is used
-
-Gemini does three jobs here. It does not do a fourth.
-
-| Job | Where | What it produces |
-|---|---|---|
-| **Diagnose** an error the rule engine does not recognise | `classifier.py` slow path | `root_cause_class`, a plain-language explanation, a suggested action, a confidence |
-| **Read** an inbound customer reply | `inbound.py` | intent, sentiment, a promise-to-pay date |
-| **Write** the WhatsApp message and voice script for that specific customer | `llm_agent.py` | Hinglish copy naming the customer, amount and reason |
-
-**What it never does is decide how to spend money.** `policy.py` owns that, and reads exactly one field from a diagnosis: `root_cause_class`. The model's `suggested_action` is written to the ledger and never executed — it is there so a reviewer can compare what the model proposed against what the policy actually did.
-
-### Fast path, slow path
-
-Most records never reach the model. An `error.reason` present in `RULE_MAP` is classified deterministically, at zero cost, by the rule engine. The model is asked only where the rules run out. The receipt prints the split for exactly this reason: a system claiming every decision is AI is the easiest kind of claim to disprove.
-
-### The model can add a stop, never remove one
-
-An inbound reply is read by Gemini **and** by a keyword matcher, and the two results are OR-ed. If the model reads *"band karo"* as an agreement to pay, the contact is suppressed anyway. A missed opt-out is the one error in this system with a regulator attached to it, so the model is never the only thing standing between a customer and another message.
-
-### The model writes the words, never the numbers
-
-Every generated message is checked before it is sent: each amount in the text must equal the record's amount in paise, and each link must be one we created. On failure the deterministic template is sent instead and an `LLM_OUTPUT_REJECTED` entry records what was rejected and why. A wrong amount in a recovery message is not a cosmetic defect — it is a payment instruction a customer may act on.
-
-### Why demo mode replays recorded responses
-
-The ledger hashes `llm_model`, `llm_latency_ms` and `llm_confidence_bp`, and the model's text lands in the hashed `details` field. A live call returns different text and a different latency on every run, so calling Gemini directly would mean the demo could never reproduce its own head hash — and reproducibility is the claim this whole repository rests on.
-
-So responses are recorded once against a real key and committed to `backend/data/llm_cache.json`:
-
-```bash
-make refresh-llm-cache              # fills missing keys only
-make refresh-llm-cache ARGS=--all   # re-records everything, after a prompt change
+```
+HARD_DECLINE            compliance halt — never contact, at any cost
+HOLDOUT_CONTROL         the control arm is observed, never treated
+PROMISE_TO_PAY_PENDING  a stated date defers; it does not stop
+LADDER_EXHAUSTED        this class's escalation ladder is finished
+RETRY_CAP_REACHED       three attempts in this batch
+CAC_CEILING             spend would exceed 15% of the payment
+NEGATIVE_EXPECTED_VALUE cost beats the class-average margin
+CONSENT_WITHDRAWN       opt-out registry
+QUIET_HOURS_DEFERRED    TRAI 21:00–09:00 IST, voice only
+ECONOMICALLY_UNVIABLE   ERV — this attempt is not worth its cost
+PROCEED
 ```
 
-Three consequences worth stating:
+Three refusals leave the record **open** rather than closing it — a quiet-hours deferral, a holdout observation, and a stated promise to pay are pauses, not stops. The recovery tick delivers the "later".
 
-- **The committed file is the evidence.** Open it and read exactly what Gemini returned, with model, token counts and latency, without an API key and without trusting this README.
-- **A cache miss raises. It does not fall back to a template.** The previous build silently simulated every model call in demo mode, which is precisely why its AI claims could not be verified — the demo looked identical whether the model ran or not. A green run now means recorded model output was actually used.
-- **The cache key includes a prompt version.** Editing a prompt without bumping it would replay an answer to a question no longer being asked.
+The escalation ladder, per failure class:
 
----
-
-## Measuring money honestly
-
-The demo batch shows the mechanism. It deliberately **does not report lift**.
-
-With 65 records a 20% holdout leaves 11 controls. Across ten assignment seeds the control recovery rate on this dataset swings between **0% and 41.7%**, mean 22.3 against a population rate of 24.6. The estimator is unbiased; the sample is simply too small. Eleven observations cannot carry a causal claim, and this project's whole argument is that it does not overstate.
-
-So measurement is a separate command over a larger population — 2,000 contacts, 10 seeds ([`results/lift_analysis.md`](results/lift_analysis.md)):
-
-<div align="center">
-
-| Metric | Value |
-|:---|---:|
-| Treated recovery rate | 62.7% |
-| Control recovery rate (uncontacted) | 28.8% |
-| **Incremental lift** | **+33.9 pp** <sub>(95% CI +33.0 to +34.9)</sub> |
-| Incremental GMV per run | Rs 42,04,956 |
-| Value at 20% assumed margin | Rs 8,40,991 |
-| Channel spend per run | Rs 1,189.95 |
-| **Cost per incremental recovery** | **Rs 2.18** |
-
-</div>
-
-**The control rate is not zero, and that is the point.** A real share of failed payments recover with no intervention — transient bank faults especially, where 53% of the synthetic population pays unprompted. Quoting the treated rate alone would overstate this system's contribution by 28.8 percentage points.
-
-Channel spend is small because messaging in India is cheap relative to the payments being chased. The binding constraint on recovery is therefore **not budget but consent and customer tolerance** — which is why the stopping rules matter more than the cost ceiling for most records. The ceiling only bites on micro-payments, where it correctly refuses to spend 50 paise chasing 40.
+| Class | Rungs | Cost |
+|---|---|---|
+| `TRANSIENT_TECHNICAL` | `silent_retry` × 5 | 0p |
+| `AUTH_FRICTION` | `whatsapp_link` × 2 | 50p |
+| `MANDATE_BALANCE` | `upi_resequence` → `whatsapp_link` | 50p |
+| `B2B_RECEIVABLE` | `whatsapp_link` → `hinglish_voice` → `human_queue` | 50p → 200p → 0p |
+| `HARD_DECLINE` | *(empty)* | — |
 
 ---
 
-## What is real, and what is not
+## Expected Recovery Value
 
-| Component | Status |
+Before an intervention executes, is it economically worth attempting?
+
+```
+expected_value = amount × probability
+expected_net   = expected_value − action cost
+expected_net <= 0  →  ECONOMICALLY_UNVIABLE
+```
+
+Break-even is a refusal, not an approval: an attempt that only matches its own cost in expectation has spent real money and real customer patience for nothing.
+
+**The probability comes from history that already exists**, most specific first, and is always labelled:
+
+| Source | Threshold |
 |---|---|
-| Hash chain, verification, tamper detection | **Real** — runs on actual data, covered by tests |
-| Append-only enforcement | **Real** — SQLAlchemy events plus SQLite triggers |
-| Policy engine, stopping rules, reason codes | **Real** — all nine codes fire in a normal run |
-| Consent registry, quiet hours, suppression | **Real** — enforced before every outbound |
-| Classification, holdout assignment, lift arithmetic | **Real** — deterministic and stratified |
-| Customer outcomes | *Simulated* — each record carries a stated counterfactual |
-| WhatsApp sends, voice calls, TTS | *Simulated* — nothing leaves the machine |
-| Razorpay payment links and settlement webhooks | **Real** — Test Mode, end to end; see [Live Razorpay evidence](#live-razorpay-evidence) |
-| Gemini diagnosis, reply reading, message writing | **Real** — recorded responses, replayed deterministically |
+| `customer_history` | ≥ 3 attempts on this channel for this contact |
+| `channel_history` | ≥ 20 attempts on this channel across all records |
+| `default_estimate` | otherwise — the config per-class rate, marked *not observed* |
+
+No model, no training, no new service. Both history sources reuse the same attribution the dashboard reports.
+
+A worked example, in the units the system actually uses — a WhatsApp send costs **50 paise**, not ₹50:
+
+```
+Payment: Rs 5,000.00
+Action: WhatsApp Link
+Estimated success: 62%
+Expected recovery: Rs 3,100.00
+Cost: Rs 0.50
+Expected net: Rs 3,099.50
+Decision: PROCEED
+```
+
+And the case ERV exists for — four links to this contact, none ever paid:
+
+```
+Estimated success: 0%
+Expected net: -Rs 0.50
+Decision: STOP - ECONOMICALLY UNVIABLE
+Basis: 0 of 4 previous whatsapp_link attempts on this contact were recovered.
+```
+
+The flat per-class rate says `AUTH_FRICTION` recovers 40% of the time, so it would approve a fifth message forever. ERV is evaluated **last**, after every other gate, so a compliance stop is never reported as an economic one.
+
+---
+
+## Razorpay Payment Links and settlement
+
+Two events can settle the same rupee, and Razorpay emits both.
+
+| Event | Correlation |
+|---|---|
+| `payment_link.paid` | names the link; we hold a row proving which record it was created for. **The reliable path.** |
+| `payment.captured` | direct match on payment id first; falls back to link correlation only when the payload genuinely contains a link id |
+
+The `RazorpayPaymentLink` row is the trust anchor. Its `recovery_action_id` is the **`entry_hash` of the ledger entry that created the link**, so the correlation is only valid while that entry's content is unaltered.
+
+`_extract_payment_link_id` returns `None` rather than reconstructing an id. Guessing which link a captured payment belongs to — by amount, by recency, by anything — would let one customer's payment recover a different customer's record, which is the worst failure this system could have.
+
+Webhook `notes` are attacker-supplied from this system's point of view: a match adds confidence, a mismatch is disqualifying, and absence proves nothing.
+
+**The payer's browser landing page changes no state.** Its parameters live in a URL the payer can edit; settlement happens on the signed webhook, over a channel the payer cannot forge.
 
 ### Live Razorpay evidence
 
-The whole loop has been run against Razorpay Test Mode, not described. One
-payment, end to end, every id verifiable against the account:
+The whole loop has been run against Razorpay Test Mode, not described. One payment, end to end, every id verifiable against the account:
 
 ```
 signed payment.failed  pay_LIVE4E4D1A964440   Rs 450.00, authentication_failed
@@ -326,140 +368,118 @@ signed payment.failed  pay_LIVE4E4D1A964440   Rs 450.00, authentication_failed
   -> signed payment_link.paid -> STATE_INTERVENING_TO_RECOVERED
 ```
 
-Razorpay delivered three events for that payment inside three seconds —
-`payment.authorized`, then `payment.captured` (carrying the *new* payment id and
-no link id, so it settles nothing), then `payment_link.paid`. The ledger holds
-exactly one recovery transition. Correlation runs through the
-`RazorpayPaymentLink` row this system wrote when it created the link, never
-through amount, timing, or a payment id in the webhook body.
-
-Six real Payment Links have been created across these runs. Signature
-verification fails closed outside demo mode, and a live link whose `callback_url`
-is a loopback host is refused before the API call and the refusal is ledgered.
-
-### Not built yet
-
-Stated plainly, because a reviewer will find these anyway.
-
-- **Customer messaging is still simulated.** The Payment Link is real and payable; the WhatsApp message carrying it is not sent. Nothing leaves the machine to a customer.
-- **Demo mode replays recorded Gemini responses rather than calling the API.** This is deliberate and it is explained in full under [How Gemini is used](#how-gemini-is-used). The short version: a live model returns different text and a different latency every time, and both land in the hash preimage, so a demo that called Gemini directly could never reproduce its own head hash. `DEMO_MODE=false` makes real calls.
-- **The recorded cache ships empty in this checkout.** Until `make refresh-llm-cache` is run once with a real key, the AI figures in the receipt above are zero and every generated message falls back to its template.
-- **SQLite, single node.** WAL and a busy timeout are configured; production needs Postgres and a database-level sequence.
-- **The "Ask RAY" widget is scripted**, not a live model call.
+Razorpay delivered three events for that payment inside three seconds — `payment.authorized`, then `payment.captured` (carrying the *new* payment id and no link id, so it settles nothing), then `payment_link.paid`. **The ledger holds exactly one recovery transition.**
 
 ---
 
-## Under the hood
+## Idempotency and concurrency
 
-<details>
-<summary><b>Why the hash chain holds — and why it is not protected by a lock</b></summary>
+Razorpay retries delivery on any non-2xx and on a timeout, fires two event types for one rupee, and the recovery tick is an endpoint anyone can call twice. Every protection used to be read-then-write — correct in a single thread, atomic nowhere.
 
-<br/>
+| Primitive | Mechanism | Closes |
+|---|---|---|
+| `claim_state` | conditional `UPDATE … WHERE recovery_state IN (…)` | two RECOVERED transitions for one payment |
+| `claim_link` | the same, on the link's settled flag | two deliveries both settling one link |
+| `claim_attempt` | `INSERT` against `UNIQUE(payment_id, batch_key, attempt_number)` | two workers both messaging one customer |
 
-Every entry carries `sequence_no`, `prev_hash` and `entry_hash`, and **all three are `UNIQUE`**. Forking the chain would require two rows claiming the same predecessor, which the unique index forbids.
+`transition_state` returns whether **this** caller made the transition, and settlement checks it — answering "recovered" for a transition another delivery made is how a duplicate webhook becomes a duplicate figure downstream.
 
-That matters more than it looks. Chain integrity does not depend on the writer holding a lock correctly — it is a property **the database enforces**. A racing writer loses on `IntegrityError`, re-reads the head, and retries. This holds across threads, event loops and separate `uvicorn --workers` processes alike, where an in-process lock would do nothing at all. A test runs four concurrent writers against a real file database and asserts no gaps and a valid chain.
+**Retry after partial failure** is decided by whether the customer was actually contacted: if nothing was sent, the claim is released and the rung is retried; if a send is already on the ledger, the claim is kept, because releasing it would send a second copy of the same message.
 
-The hash preimage follows one rule: **only integers and length-prefixed bytes. Never floats, never formatted datetimes.**
+---
 
-| Choice | Because |
-|---|---|
-| Length-prefixed fields | Plain concatenation is ambiguous — `("ab","c")` and `("a","bc")` produce an identical digest, so content could shift between adjacent fields undetected |
-| Money as integer paise | Float arithmetic is not reproducible (`0.1 + 0.2 != 0.3`) and disagrees between language runtimes, breaking any independent verifier |
-| Timestamps as integer microseconds | SQLite stores `DateTime` as TEXT whose exact rendering depends on the driver |
-| NFC-normalised text | Audit details carry Rupee signs and Hinglish |
+## The recovery tick
 
-A golden-fixture test pins the preimage byte for byte, so any future change to the format fails loudly rather than silently invalidating every hash already written.
+The live path calls `execute_recovery` once per webhook and never again — so without something driving it, the ladder stops at rung one, the attempt cap is unreachable, and a quiet-hours deferral is a permanent halt rather than a pause.
 
-</details>
-
-<details>
-<summary><b>Why consent belongs to a person, not a payment</b></summary>
-
-<br/>
-
-`app/consent.py` keys suppression on `sha256(normalised_phone)`. The registry only ever answers *"is this contact suppressed?"*, so it has no reason to hold a raw identifier.
-
-Phone formats — `+919876543210`, `919876543210`, `09876543210`, `9876543210` — all resolve to one identity, because suppression leaks through format variation otherwise.
-
-**Opting out on one payment silences that contact's other payments.** There is a test for exactly this, and the demo batch demonstrates it: a contact who opted out earlier has two later failures blocked with `CONSENT_WITHDRAWN`. A per-payment flag passes every other test and still fails this one — which is why the original implementation looked correct.
-
-The check runs *inside* each channel action rather than once at the top, so a channel added later cannot accidentally skip it. Silent retry is exempt by design: it is a server-to-server retry against the bank and never reaches the customer.
-
-</details>
-
-<details>
-<summary><b>The dataset and its stated counterfactuals</b></summary>
-
-<br/>
-
-`backend/data/test_batch_50.json` holds **65 synthetic records**.
-
-| Failure class | Records |
-|---|---:|
-| `MANDATE_BALANCE` | 16 |
-| `TRANSIENT_TECHNICAL` | 15 |
-| `AUTH_FRICTION` | 13 |
-| `B2B_RECEIVABLE` | 9 |
-| `HARD_DECLINE` | 4 |
-
-Seven exist specifically so each stopping rule fires in a normal run, with amounts chosen so the intended rule trips first: a Rs 6.50 QR payment that breaches the ceiling on its second attempt, a Rs 5.00 payment where a 50 paise message chases 40 paise of margin, two payments from a contact who opted out earlier, and two overdue invoices arriving at 23:10 and 02:40 IST.
-
-Every record carries a stated counterfactual, written into the dataset rather than computed at runtime:
-
-```json
-"behavior": {
-  "natural_recovery_at_hours": 18.3,
-  "responds_to": { "whatsapp_link": 0.30 }
-}
+```bash
+python -m app.tools.run_tick --dry-run   # default: reports, changes nothing
+python -m app.tools.run_tick --execute   # acts
+curl -X POST 'localhost:8000/api/recovery/tick?dry_run=false'
 ```
 
-A counterfactual hidden inside code is not evidence; one sitting in the input data is. Responsiveness is per attempt and compounds across the ladder — 0.45 for silent retry reaches ~83% over three attempts, 0.30 for WhatsApp ~51% over two, in line with published recovery rates.
+`dry_run` defaults to **true** in both the CLI and the endpoint: a misconfigured caller that forgets the flag should report what it would do rather than message customers. A dry run makes zero writes and zero external calls, and returns the identical selection a real tick would act on.
 
-</details>
+It skips records that are held for review, that still have an unexpired payable link, or that were touched inside the 30-minute follow-up window. One record raising does not abort the pass.
 
-<details>
-<summary><b>Design decisions worth defending</b></summary>
+---
 
-<br/>
+## Measuring money honestly
 
-**A `UNIQUE` constraint instead of a lock.** A `threading.Lock` protects one process. Moving the invariant into a unique index on `prev_hash` makes a forked chain structurally impossible rather than merely unlikely, and it survives multiple worker processes.
+**Cohort scoping.** `GET /api/metrics/dashboard?scope=batch|live|all` — revenue, recovery rate, cost, ROI, class breakdown and lift are all computed over **one** population, and the reading says which. Before this the endpoint summed every record ever stored while scoping cost to non-null batch ids, so a live recovery's GMV counted as revenue and its spend did not count as cost.
 
-**Integer paise everywhere.** The codebase already used paise for `amount`; cost was inconsistently a float. Aligning them removed floats from the preimage entirely and made the cost ceiling an exact integer comparison with no division.
+**Lift, not gross recovery.** A holdout arm is never contacted. `arm_coverage` reports how much of the cohort carries an arm at all, because lift is computed from `arm` and only the simulator assigns it.
 
-**The demo receipt uses a fixed virtual clock.** Wall-clock timestamps are part of the preimage, so a real ledger produces a different head hash every run — correct for production, useless for a reproducibility claim. The API never installs it.
+**Per-intervention economics.** Which action recovered how much, at what cost, with what net return. The attribution rule is deliberately narrow:
 
-**Refusals are styled as outcomes, not errors.** In the Audit Inspector a policy refusal is amber, not red. A system that declines to spend money on a customer who does not want to hear from it has succeeded.
+> A recovery is credited to the **last attempt made before** the record transitioned to RECOVERED — and to **nothing at all** when no attempt preceded it.
 
-**No agent framework.** Orchestration is a deterministic rule engine, a finite state machine and a policy layer. Gemini is called only for the ambiguous slice — diagnosing unmapped errors, reading customer replies, writing per-customer copy — with structured output and a confidence threshold that escalates to a human below 0.7. It never chooses a channel or authorises a rupee of spend. A system whose product is auditability should not bury its decisions inside an opaque agent loop.
+Both halves matter. Crediting the last attempt lets an escalation ladder report honestly. Crediting nothing keeps the holdout honest: the control arm is never contacted and some of it pays anyway, and those rupees belong to no channel.
 
-</details>
+The per-channel costs and the headline cost come from **two independent walks** of the ledger, and the response reports both plus the residual — so their agreement is evidence rather than a tautology.
+
+---
+
+## Configuration
+
+All settings are environment variables, read in `backend/app/config.py`. Start from `backend/.env.example`.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DEMO_MODE` | `true` | `true` replays recorded model responses and blocks the live Razorpay path |
+| `DATABASE_URL` | `sqlite:///./recoveros.db` | SQLAlchemy URL |
+| `RAZORPAY_KEY_ID` | — | Test Mode key id |
+| `RAZORPAY_KEY_SECRET` | — | Test Mode key secret |
+| `RAZORPAY_WEBHOOK_SECRET` | — | HMAC secret; **missing or placeholder rejects every webhook when `DEMO_MODE=false`** |
+| `PUBLIC_BASE_URL` | `http://localhost:8000` | builds the Payment Link callback; a loopback host is refused before a live link is created |
+| `GEMINI_API_KEY` | — | required only to record new cache entries |
+| `SARVAM_API_KEY` | — | Hinglish TTS; mocked when absent |
+| `MERCHANT_MARGIN_PERCENT` | `20` | assumed gross margin; drives the margin-based EV check |
+| `HOLDOUT_PERCENT` | `20` | share of contacts never contacted |
+| `RECOVEROS_SEED` | `20260825` | deterministic simulation seed |
+
+System constants live in `config.py` rather than the environment because they are policy, not deployment: `MAX_RETRIES = 3`, `CAC_CEILING_PERCENT = 15`, `SETTLEMENT_TIMEOUT_MINUTES = 30`, `CONFIDENCE_THRESHOLD = 0.7`, quiet hours 21:00–09:00 IST, and the per-channel costs in paise.
+
+### Test Mode vs Demo Mode — read this before running anything
+
+These are **two different switches** and confusing them is the one way to spend real money or leak real contact.
+
+| | `DEMO_MODE=true` | `DEMO_MODE=false` |
+|---|---|---|
+| Gemini | replays `data/llm_cache.json`; a miss raises rather than calling | **real API calls, real cost** |
+| Razorpay | no client is built; demo placeholder URLs | **real Test Mode Payment Links created** |
+| Sarvam TTS | mocked | **real synthesis, real cost** |
+| Webhook signature | accepted without a secret, for local work | **fails closed without a real secret** |
+
+**Razorpay Test Mode is still real API traffic.** No live money moves, but links are created against the account and appear in the dashboard. The source gate means only records ingested from a signed webhook (`source = razorpay_webhook`) can reach it — the synthetic batch cannot, even with real credentials loaded.
+
+**The test suite is safe either way.** Each integration is locked three times over — the flag that selects the live path, the function that performs the call, and the SDK or transport underneath — so `pytest` makes no external call even with `DEMO_MODE=false` and real credentials in `.env`. See `tests/test_external_isolation.py`.
 
 ---
 
 ## API
-
-Every endpoint below exists. `curl` any of them against a running server.
 
 | Method | Endpoint | Purpose |
 |---|---|---|
 | `GET` | `/health` | Health check |
 | `POST` | `/api/batch/run` | Start a batch run |
 | `GET` | `/api/batch/{batch_id}/status` | Progress and per-class breakdown |
-| `GET` | `/api/metrics/dashboard` | Metrics, lift decomposition, ledger head |
+| `GET` | `/api/metrics/dashboard` | Cohort metrics, interventions, lift, AI insight, ledger head |
 | `GET` | `/api/ledger/verify` | Walk and verify the whole chain |
 | `GET` | `/api/ledger/head` | Current head hash and entry count |
-| `GET` | `/api/audit/{payment_id}` | Full audit trail for one payment |
+| `GET` | `/api/audit/{payment_id}` | Audit trail, AI recommendation, customer insight |
 | `GET` | `/api/audit/{payment_id}/verify` | Recompute that payment's entry hashes |
 | `GET` | `/api/llm/activity` | Model calls, tokens, latency, rejections, rule/model split |
-| `GET` | `/api/recovery/{payment_id}` | Record with audit trail |
+| `GET` | `/api/recovery/{payment_id}` | Record, audit trail, AI recommendation, customer insight |
+| `POST` | `/api/recovery/tick` | Advance every live recovery that is due (`dry_run` defaults true) |
 | `POST` | `/api/recovery/{payment_id}/opt-out` | Withdraw consent for this contact |
-| `POST` | `/api/recovery/{payment_id}/reply` | Inbound customer message; Gemini reads it, policy acts on it |
+| `POST` | `/api/recovery/{payment_id}/reply` | Inbound customer message; the model reads it, policy acts |
 | `POST` | `/api/recovery/{payment_id}/quarantine` | Halt on a fraud signal, recorded with `actor="system"` |
 | `POST` | `/api/recovery/{payment_id}/settle` | Simulate settlement |
 | `POST` | `/api/recovery/{payment_id}/dtmf` | Voice keypad response |
 | `GET` | `/api/voice/{payment_id}` | Hinglish voice script |
-| `POST` | `/api/webhooks/razorpay` | Razorpay webhook ingestion |
+| `POST` | `/api/webhooks/razorpay` | Signed webhook ingestion |
+| `GET` | `/api/webhooks/razorpay` | Payer landing page — **changes no state** |
 | `WS` | `/ws/dashboard` | Live state transitions |
 
 ---
@@ -468,40 +488,19 @@ Every endpoint below exists. `curl` any of them against a running server.
 
 ```bash
 # Terminal 1 — API on :8000
-cd backend && python -m uvicorn app.main:app --port 8000
+cd backend && uvicorn app.main:app --reload
 
 # Terminal 2 — dashboard on :5173
 cd frontend && npm install && npm run dev
 ```
 
-Open <http://localhost:5173>, go to **Recovery**, press **Deploy**. The board fills over a WebSocket, the tab strip filters by failure class, and any card opens the Audit Inspector with sequence numbers and entry hashes per row.
-
-<img src="docs/screenshots/dashboard.jpg" alt="Recovery dashboard with failure-class filter and live pipeline" width="100%" />
-
-<details>
-<summary><b>Configuration</b> — <code>backend/.env</code>, all optional</summary>
-
-<br/>
-
-```env
-RECOVEROS_SEED=20260825          # deterministic runs
-HOLDOUT_PERCENT=20               # untreated control arm
-MERCHANT_MARGIN_PERCENT=20       # what a recovered rupee is actually worth
-DEMO_MODE=true                   # false enables real Gemini and Razorpay calls
-GEMINI_API_KEY=
-RAZORPAY_KEY_ID=
-RAZORPAY_KEY_SECRET=
-RAZORPAY_WEBHOOK_SECRET=         # per-endpoint, NOT the API key secret
-DATABASE_URL=sqlite:///./recoveros.db
-```
-
-</details>
+The dashboard's Command Center reads top to bottom as one argument: what revenue is at risk, what came back, which intervention brought it back, what the model made of the hard cases, where each record sits — and one click into any record, why *that* customer, why *that* channel, why now.
 
 ---
 
 ## Tests
 
-**134 tests across 19 modules.**
+**632 tests.**
 
 ```bash
 cd backend && python -m pytest tests/ -q
@@ -510,17 +509,69 @@ cd backend && python -m pytest tests/ -q
 | Module | Covers |
 |---|---|
 | `test_ledger.py` | Golden preimage, field-shift collisions, tamper and deletion detection, append-only enforcement, fork prevention, four-writer concurrency |
+| `test_safety_guard.py` | All thirteen checks, provenance by type, live/synthetic scoping, refusal is ledgered |
+| `test_concurrency_idempotency.py` | Duplicate and racing webhooks, two workers, both settlement events together, retry after partial failure, exactly-once revenue |
+| `test_erv.py` | Expected value arithmetic, the break-even boundary, probability sources, every existing refusal still winning |
+| `test_customer_profile.py` | Strong / mixed / absent history, insufficient data stated, policy overriding the recommendation |
+| `test_ai_advisory.py` | High and low confidence, malformed output, unmapped reason, and that a recommendation alone executes nothing |
+| `test_intervention_economics.py` | Per-channel attribution, the recovery cutoff, unattributed recoveries, re-run protection |
+| `test_metrics_cohorts.py` | Batch / live / all isolation, cost belonging to the records reported |
+| `test_recovery_tick.py` | Selection, skip reasons, dry run writing nothing, deferral resuming |
+| `test_external_isolation.py` | Three independent locks per integration; the suite cannot reach the network |
+| `test_policy.py` | Every reason code, ladder escalation, deferral versus stop |
 | `test_consent.py` | Phone normalisation, cross-payment suppression, quiet hours, no raw PII stored |
-| `test_policy.py` | Every reason code, ladder escalation, deferral versus stop, refusals reaching the ledger |
 | `test_outcome_engine.py` | Draw reproducibility, order independence, attribution, holdout stratification |
-| `test_guardrails.py` | Attempt cap, cost ceiling, opt-out precision |
-| `test_e2e.py` | Full batch, terminal states, deferred records staying open |
-| `test_llm_cache.py` | Key stability, prompt-version invalidation, replayed latency, miss raises rather than falls back |
-| `test_diagnosis.py` | Slow-path diagnosis, out-of-enum class, low confidence, suggestion recorded but not acted on |
-| `test_inbound_reply.py` | Intent dispatch, keyword override of the model, promise-to-pay, model metadata on every entry |
-| `test_llm_activity.py` | Activity derived from the ledger, rejection counting |
-| `test_attribution.py` | Authorship present in every module and reviewer-facing file; entry point imports |
-| *and 8 more* | Classifier, recovery actions, settlement, webhooks, batch, state machine, WebSocket |
+| *and more* | Classifier, guardrails, diagnosis, inbound replies, settlement, webhooks, batch, state machine, WebSocket, attribution |
+
+Beyond count, three techniques carry the weight: **mutation testing** (break one invariant, confirm the suite catches it — every guarantee in this README has been mutated), **deterministic race reproduction** (no sleeps; one worker held inside its action while another decides beside it), and **structural assertions** (AST parses proving advisory modules cannot import an executor).
+
+---
+
+## What is real, and what is not
+
+| Component | Status |
+|---|---|
+| Hash chain, verification, tamper detection | **Real** — runs on actual data, covered by tests |
+| Append-only enforcement | **Real** — SQLAlchemy events plus SQLite triggers |
+| Policy engine, stopping rules, reason codes | **Real** — every code fires in a normal run |
+| Safety Guard, ERV, idempotency claims | **Real** — enforced on every execution path |
+| Consent registry, quiet hours, suppression | **Real** — enforced before every outbound |
+| Customer profile and AI advisory | **Real** — read from stored records and the ledger |
+| Classification, holdout assignment, lift arithmetic | **Real** — deterministic and stratified |
+| Razorpay payment links and settlement webhooks | **Real** — Test Mode, end to end |
+| Gemini diagnosis, reply reading, message writing | **Real** — recorded responses, replayed deterministically |
+| Customer outcomes in the batch | *Simulated* — each record carries a stated counterfactual |
+| WhatsApp sends, voice calls, TTS delivery | *Simulated* — nothing leaves the machine |
+
+### Not built yet
+
+- **Customer messaging is still simulated.** The Payment Link is real and payable; the WhatsApp message carrying it is composed and ledgered, not delivered.
+- **No telephony.** Voice audio is synthesized or mocked; no call is placed.
+- **No scheduler process.** The recovery tick is an endpoint and a CLI. Point cron at it.
+- **Demo mode replays recorded Gemini responses.** A live model returns different text and a different latency every time, and both land in the hash preimage — so a demo that called Gemini directly could never reproduce its own head hash.
+- **SQLite, single node.** WAL and a busy timeout are configured; production needs Postgres.
+- **No authentication on the dashboard API**, and no multi-tenant isolation.
+- **The "Ask RAY" widget is scripted**, not a live model call.
+
+Known defects and internal rough edges are listed in [documentation/ARCHITECTURE.md § Known limitations](documentation/ARCHITECTURE.md#21-known-limitations) rather than hidden.
+
+---
+
+## Why RecoverOS is different
+
+Most recovery tools optimise one number and show you that number. This one is built around the three questions that follow it.
+
+**It can prove what it did.** Not a log — a hash chain with UNIQUE `prev_hash`, append-only in the ORM and in the database, with a demo that tampers with the file and gets caught. Every claim in this README is re-checkable by a command in it.
+
+**It records restraint as carefully as action.** Eleven reason codes, every refusal on the chain with the gate that fired. "We did not contact this customer, here is why" is a first-class output, because in India that is the question that decides whether the system is deployable at all.
+
+**It separates advice from authority.** The model is genuinely useful — it diagnoses failures the rule engine cannot — and it holds no power whatsoever. Four independent mechanisms enforce that, and each is tested by breaking it and watching the suite fail.
+
+**It prices the attempt before making it.** Not a class average: what *this* channel has actually recovered from *this* customer. And when the history is too thin to say, it says so instead of guessing.
+
+**It measures against a holdout.** Gross recovery flatters every system in this category. Only the difference against an untreated arm is attributable, and the dashboard reports how much of the cohort even carries an arm.
+
+**It survives the real world.** Duplicate webhooks, both settlement events at once, two workers on one record, a crash mid-send. Exactly one message, exactly one recovery, exactly one lot of revenue — enforced by database constraints, not by hoping.
 
 ---
 
@@ -529,27 +580,37 @@ cd backend && python -m pytest tests/ -q
 ```
 backend/
   app/
-    ledger.py            hash chain: canonical preimage, append, verify
-    policy.py            act or refuse, on what channel, when to stop
-    consent.py           customer-level suppression, quiet hours
-    outcome_engine.py    counterfactual replay, holdout assignment
-    guardrails.py        attempt cap, cost ceiling, opt-out detection
-    classifier.py        error code to failure class: rules first, model second
-    llm_cache.py         records real Gemini responses, replays them deterministically
-    llm_agent.py         diagnosis, reply parsing, per-customer copy, output guards
-    inbound.py           customer reply -> deterministic consequence
-    state_machine.py     lifecycle FSM; routes all writes through the ledger
-    recovery_actions.py  channel implementations
-    models.py            ORM, append-only enforcement
-    routes/              webhooks, batch, recovery, metrics, audit, ledger, llm
-    tools/               run_demo, verify_ledger, tamper_demo, run_measurement,
-                         refresh_llm_cache
-  data/                  65-record dataset with stated counterfactuals
-                         plus llm_cache.json, the recorded Gemini responses
-  tests/                 134 tests
-frontend/                React 19, Vite, Tailwind 4
-results/                 committed output from the commands above
-docs/                    architecture notes and screenshots
+    ledger.py                  hash chain: canonical preimage, append, verify
+    policy.py                  act or refuse, on what channel, when to stop
+    erv.py                     expected recovery value of one candidate action
+    safety_guard.py            final authorization; 13 checks
+    idempotency.py             atomic claims: state, link, attempt
+    customer_profile.py        per-contact history -> personalized advisory
+    ai_advisor.py              structured AI recommendation, never authorising
+    intervention_economics.py  which action recovered how much, at what cost
+    recovery_tick.py           advances open live recoveries
+    consent.py                 suppression registry, quiet hours
+    outcome_engine.py          counterfactual replay, holdout assignment
+    guardrails.py              attempt cap, cost ceiling, opt-out detection
+    classifier.py              error code -> failure class: rules first, model second
+    llm_cache.py               records real Gemini responses, replays deterministically
+    llm_agent.py               diagnosis, reply parsing, copy, output guards
+    event_adapter.py           signed webhook -> record, idempotently
+    settlement.py              payment -> record correlation, exactly-once
+    inbound.py                 customer reply -> deterministic consequence
+    state_machine.py           lifecycle FSM; routes all writes through the ledger
+    recovery_actions.py        channel implementations + execute_recovery
+    models.py                  ORM, append-only enforcement
+    routes/                    webhooks, batch, recovery, metrics, audit, ledger, llm
+    tools/                     run_demo, verify_ledger, tamper_demo, run_measurement,
+                               run_tick, refresh_llm_cache, seed_*
+  data/                        65-record dataset with stated counterfactuals
+                               plus llm_cache.json, the recorded Gemini responses
+  tests/                       632 tests
+frontend/                      React 19, Vite, Tailwind 4
+documentation/ARCHITECTURE.md  full technical architecture
+results/                       committed output from the commands above
+docs/                          screenshots and earlier architecture notes
 ```
 
 ---
@@ -558,7 +619,7 @@ docs/                    architecture notes and screenshots
 
 **Built by [Rahul Hongekar](https://github.com/RahulH007)** for the Razorpay Buildathon, Track 03.
 
-<sub>Every number in this document was produced by a command in it.</sub>
+<sub>Every number in this document is produced by a command in it.</sub>
 
 <sub>Copyright (c) 2026 Rahul Hongekar. Published for evaluation; no licence granted. See [NOTICE.md](NOTICE.md).</sub>
 

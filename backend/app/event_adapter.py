@@ -25,8 +25,10 @@ Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 
 from typing import Optional
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app import customer_profile
 from app.classifier import RULE_MAP, classify
 from app.models import AuditTrailEntry, PaymentFailureRecord
 from app.razorpay_client import LIVE_SOURCE
@@ -126,7 +128,24 @@ async def ingest_and_process(
 
     record = PaymentFailureRecord(batch_id=batch_id, **normalized)
     db.add(record)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Two deliveries of the same payment.failed both passed the existence
+        # check above before either had written, and the primary key rejected
+        # the loser. That is a duplicate, not a fault: report it the same way
+        # the sequential case does rather than letting an IntegrityError
+        # surface in the webhook log with a broken session behind it.
+        db.rollback()
+        existing = db.query(PaymentFailureRecord).filter(
+            PaymentFailureRecord.payment_id == payment_id
+        ).first()
+        return {
+            "status": "duplicate",
+            "payment_id": payment_id,
+            "recovery_state": existing.recovery_state if existing else None,
+            "failure_class": existing.failure_class if existing else None,
+        }
     db.refresh(record)
 
     log_audit(
@@ -141,6 +160,19 @@ async def ingest_and_process(
     )
 
     failure_class = await classify(db, record)
+
+    # --- Personalized advisory: recorded, never authorising -----------------
+    #
+    # Written here and nowhere else. The live path is where personalization
+    # matters and where one entry per record is proportionate; every other
+    # caller reads it computed-on-demand, which is what keeps the synthetic
+    # batch's ledger byte-identical to what it was.
+    #
+    # Zero cost, not an attempt, no state change. app/customer_profile.py
+    # carries why it cannot become an action.
+    customer_profile.record_advisory(
+        db, record, customer_profile.advise(db, record),
+    )
 
     # --- Unmapped-reason safety gate ---------------------------------------
     #

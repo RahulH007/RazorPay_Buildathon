@@ -6,15 +6,38 @@ RecoverOS - original work of Rahul Hongekar (github.com/RahulH007)
 Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 """
 
-from fastapi import APIRouter
+from collections import defaultdict
+from typing import Annotated, Optional
 
-from app import ledger
+from fastapi import APIRouter, HTTPException, Query
+
+from app import ai_advisor, ledger
 from app.config import MERCHANT_MARGIN_PERCENT
 from app.database import SessionLocal
+from app.intervention_economics import by_intervention
 from app.models import PaymentFailureRecord, AuditTrailEntry, BatchRun
+from app.razorpay_client import LIVE_SOURCE
 from sqlalchemy import func
 
 router = APIRouter()
+
+# The populations this endpoint can measure.
+#
+#   batch - one seeded run, the thing "measured money recovered across a batch"
+#           actually refers to
+#   live  - payments that really failed at Razorpay and were really chased
+#   all   - both, for anyone who wants the union stated explicitly
+#
+# Before this existed the endpoint summed every record ever stored while
+# scoping cost to non-null batch ids, so a live recovery's GMV counted as
+# revenue and its spend did not count as cost. Revenue and cost came from
+# different populations, and the lift block described a third.
+SCOPES = ("batch", "live", "all")
+
+# SQLite caps a statement at 999 bound parameters. Cohorts are 65 records
+# today, but the cost query binds one parameter per payment id, so it is
+# chunked rather than left as a limit nobody would remember.
+_ID_CHUNK = 400
 
 
 def _ledger_summary(db) -> dict:
@@ -26,17 +49,212 @@ def _ledger_summary(db) -> dict:
     }
 
 
+def _resolve_batch_id(db, requested: Optional[str]) -> Optional[str]:
+    """
+    Which batch `scope=batch` means.
+
+    An explicit id wins, even if it matches nothing - asking for a batch that
+    does not exist should report an empty cohort, not silently measure a
+    different one. Otherwise the most recent run that still has records, then
+    the most recent batch id any record carries.
+
+    None means the database has no batches at all. That is a real state - a
+    fresh clone, or a test fixture - and the honest cohort there is the
+    unbatched working set rather than nothing.
+    """
+    if requested:
+        return requested
+
+    run = (
+        db.query(BatchRun)
+        .filter(BatchRun.started_at.isnot(None))
+        .order_by(BatchRun.started_at.desc())
+        .first()
+    )
+    if run is not None:
+        has_records = db.query(PaymentFailureRecord).filter(
+            PaymentFailureRecord.batch_id == run.batch_id
+        ).first()
+        if has_records:
+            return run.batch_id
+
+    latest = (
+        db.query(PaymentFailureRecord.batch_id)
+        .filter(PaymentFailureRecord.batch_id.isnot(None))
+        .order_by(PaymentFailureRecord.created_at.desc())
+        .first()
+    )
+    return latest[0] if latest else None
+
+
+def _cohort_records(db, scope: str, batch_id: Optional[str]):
+    """The records this reading is about, and the batch id it settled on."""
+    if scope == "all":
+        return db.query(PaymentFailureRecord).all(), None
+
+    if scope == "live":
+        return db.query(PaymentFailureRecord).filter(
+            PaymentFailureRecord.source == LIVE_SOURCE
+        ).all(), None
+
+    resolved = _resolve_batch_id(db, batch_id)
+    if resolved is None:
+        records = db.query(PaymentFailureRecord).filter(
+            PaymentFailureRecord.batch_id.is_(None),
+            PaymentFailureRecord.source != LIVE_SOURCE,
+        ).all()
+    else:
+        records = db.query(PaymentFailureRecord).filter(
+            PaymentFailureRecord.batch_id == resolved
+        ).all()
+    return records, resolved
+
+
+def _cohort_cost_paise(db, records) -> int:
+    """
+    What was spent on exactly these records, and nothing else.
+
+    Grouped by each record's own batch id rather than filtered by one, which is
+    what lets a single rule serve all three scopes: a live record's spend is
+    found under batch_id IS NULL and is counted, where the old batch-id filter
+    dropped it entirely.
+
+    The batch half of the key is still what protects a re-run. The ledger is
+    append-only, so re-running a batch adds entries against the same payment
+    ids; keying on payment id alone would sum every run ever performed and make
+    cost climb on each one.
+    """
+    by_batch = defaultdict(list)
+    for record in records:
+        by_batch[record.batch_id].append(record.payment_id)
+
+    total = 0
+    for batch_id, payment_ids in by_batch.items():
+        for start in range(0, len(payment_ids), _ID_CHUNK):
+            chunk = payment_ids[start:start + _ID_CHUNK]
+            query = db.query(func.sum(AuditTrailEntry.cost_paise)).filter(
+                AuditTrailEntry.payment_id.in_(chunk)
+            )
+            if batch_id is None:
+                query = query.filter(AuditTrailEntry.batch_id.is_(None))
+            else:
+                query = query.filter(AuditTrailEntry.batch_id == batch_id)
+            total += query.scalar() or 0
+
+    return total
+
+
+def _cohort_meta(scope: str, batch_id: Optional[str], records) -> dict:
+    """
+    What this reading covers, stated alongside the numbers.
+
+    `arm_coverage` exists because the lift block is computed from `arm`, which
+    only the simulator assigns. Live records carry none, so a lift reported
+    beside a recovery rate over a wider population was describing a subset
+    without saying so. Now it says so.
+    """
+    with_arm = sum(1 for r in records if r.arm)
+    return {
+        "scope": scope,
+        "batch_id": batch_id,
+        "record_count": len(records),
+        "sources": sorted({r.source or "synthetic" for r in records}),
+        "arm_coverage": {
+            "with_arm": with_arm,
+            "without_arm": len(records) - with_arm,
+        },
+    }
+
+
+def _available_cohorts(db) -> list:
+    """Every population this endpoint could be asked for, with its size."""
+    cohorts = []
+
+    batched = (
+        db.query(
+            PaymentFailureRecord.batch_id,
+            func.count(PaymentFailureRecord.payment_id),
+            func.sum(PaymentFailureRecord.amount),
+        )
+        .filter(PaymentFailureRecord.batch_id.isnot(None))
+        .group_by(PaymentFailureRecord.batch_id)
+        .all()
+    )
+    for batch_id, count, gmv in batched:
+        cohorts.append({"scope": "batch", "batch_id": batch_id,
+                        "record_count": count, "total_gmv": gmv or 0})
+
+    unbatched_count, unbatched_gmv = (
+        db.query(func.count(PaymentFailureRecord.payment_id),
+                 func.sum(PaymentFailureRecord.amount))
+        .filter(PaymentFailureRecord.batch_id.is_(None),
+                PaymentFailureRecord.source != LIVE_SOURCE)
+        .one()
+    )
+    if unbatched_count:
+        cohorts.append({"scope": "batch", "batch_id": None,
+                        "record_count": unbatched_count,
+                        "total_gmv": unbatched_gmv or 0})
+
+    live_count, live_gmv = (
+        db.query(func.count(PaymentFailureRecord.payment_id),
+                 func.sum(PaymentFailureRecord.amount))
+        .filter(PaymentFailureRecord.source == LIVE_SOURCE)
+        .one()
+    )
+    if live_count:
+        cohorts.append({"scope": "live", "batch_id": None,
+                        "record_count": live_count, "total_gmv": live_gmv or 0})
+
+    total_count, total_gmv = (
+        db.query(func.count(PaymentFailureRecord.payment_id),
+                 func.sum(PaymentFailureRecord.amount)).one()
+    )
+    cohorts.append({"scope": "all", "batch_id": None,
+                    "record_count": total_count, "total_gmv": total_gmv or 0})
+
+    return cohorts
+
+
 @router.get("/metrics/dashboard")
-async def get_dashboard_metrics():
+async def get_dashboard_metrics(
+    # Annotated rather than a Query default, so the real defaults survive a
+    # direct call. tests/test_dashboard_metrics.py invokes this function
+    # without FastAPI's dependency resolution, and a Query object arriving as
+    # `scope` would be neither "batch" nor a valid scope.
+    scope: Annotated[str, Query(description="batch | live | all")] = "batch",
+    batch_id: Annotated[
+        Optional[str], Query(description="Explicit batch to measure")
+    ] = None,
+):
     """
     Aggregated dashboard metrics:
     Total GMV, Recovered GMV, Recovery Rate, Channel Cost, Net ROI,
     Cost per Recovery, per-class breakdown.
     """
+    if scope not in SCOPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"unknown scope {scope!r}; expected one of {', '.join(SCOPES)}",
+        )
+
     db = SessionLocal()
     try:
-        # Get all records
-        records = db.query(PaymentFailureRecord).all()
+        # Every figure below is computed over this one population - revenue,
+        # cost, ROI, class breakdown and lift alike.
+        records, resolved_batch_id = _cohort_records(db, scope, batch_id)
+        cohort = _cohort_meta(scope, resolved_batch_id, records)
+        cohorts = _available_cohorts(db)
+
+        # Which action recovered how much, at what cost. Over this same
+        # cohort - the table would be worse than useless if it described a
+        # different population from the totals it sits under.
+        economics = by_intervention(db, records)
+
+        # What the model read across this same cohort. Advisory only: the
+        # panel exists to show that AI improves the diagnosis, and the field
+        # says in its own payload that it authorises nothing.
+        ai_insight = ai_advisor.cohort_insight(db, records)
 
         if not records:
             return {
@@ -82,6 +300,11 @@ async def get_dashboard_metrics():
                 # verify_chain on exactly the database where someone is most
                 # likely to be checking.
                 "ledger": _ledger_summary(db),
+                "cohort": cohort,
+                "cohorts": cohorts,
+                "interventions": economics["interventions"],
+                "intervention_summary": economics["summary"],
+                "ai_insight": ai_insight,
                 "records": [],
             }
 
@@ -94,18 +317,11 @@ async def get_dashboard_metrics():
         recovered_gmv = sum(r.amount for r in recovered)
         recovered_count = len(recovered)
 
-        # Channel cost scoped to the batches the current records belong to.
-        #
-        # The ledger is append-only, so re-running a batch correctly adds new
-        # entries rather than replacing old ones. Summing the whole ledger
-        # while GMV stays pinned to the same 50 records made cost climb on
-        # every run (24.50 -> 49.00 -> 73.50). Scoping by batch_id keeps spend
-        # and revenue measured over the same run.
-        active_batches = {r.batch_id for r in records if r.batch_id}
-        cost_query = db.query(func.sum(AuditTrailEntry.cost_paise))
-        if active_batches:
-            cost_query = cost_query.filter(AuditTrailEntry.batch_id.in_(active_batches))
-        total_channel_cost_paise = cost_query.scalar() or 0
+        # Channel cost over the cohort's own records - the same records that
+        # produced recovered_gmv immediately above, so revenue and cost can no
+        # longer describe different populations. Re-run protection is unchanged
+        # and now lives in _cohort_cost_paise.
+        total_channel_cost_paise = _cohort_cost_paise(db, records)
 
         recovery_rate = (recovered_count / total_records * 100) if total_records > 0 else 0
         # Integer paise throughout; render to rupees only at the boundary.
@@ -198,6 +414,15 @@ async def get_dashboard_metrics():
                 ) if len(control) < 100 else None,
             },
             "ledger": _ledger_summary(db),
+            "cohort": cohort,
+            "cohorts": cohorts,
+            # Recovery economics per intervention: attempts, wins, spend and
+            # net return for each rung of the ladder, strongest first. Derived
+            # from the ledger in app/intervention_economics.py - no new column,
+            # no parallel tracking table to drift out of step with the chain.
+            "interventions": economics["interventions"],
+            "intervention_summary": economics["summary"],
+            "ai_insight": ai_insight,
             "records": records_list,
         }
     finally:

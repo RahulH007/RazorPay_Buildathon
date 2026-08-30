@@ -1,20 +1,21 @@
 ========================================================================
   RecoverOS - Demo Batch Receipt
+  RecoverOS - built by Rahul Hongekar (github.com/RahulH007) | Razorpay Buildathon, Track 03
 ========================================================================
   Seed                : 20260825  (deterministic)
-  Records             : 57
+  Records             : 65
   Attempt cap         : 3 per payment
   Cost ceiling        : 15% of payment value
   Assumed margin      : 20%
   Holdout             : 20% of contacts, never contacted
 ------------------------------------------------------------------------
   OUTCOME
-    treated           :  42 records,  20 recovered  (47.6%)
-    control           :  11 records,   0 recovered  (0.0%)
-    attributable      :  20 payments worth Rs 103,300.00
-    channel spend     : Rs 30.00
+    treated           :  48 records,  23 recovered  (47.9%)
+    control           :  12 records,   0 recovered  (0.0%)
+    attributable      :  23 payments worth Rs 106,191.00
+    channel spend     : Rs 31.50
 
-    Lift is deliberately NOT quoted here: n=11 controls cannot
+    Lift is deliberately NOT quoted here: n=12 controls cannot
     support a causal estimate. See results/lift_analysis.md, which
     measures 2,000 contacts across 10 seeds and reports a 95% CI.
 ------------------------------------------------------------------------
@@ -24,17 +25,38 @@
       1  NEGATIVE_EXPECTED_VALUE
       2  CONSENT_WITHDRAWN
       2  QUIET_HOURS_DEFERRED
-      4  HARD_DECLINE
-      1  ESCALATED_TO_HUMAN
-     14  LADDER_EXHAUSTED
-     11  HOLDOUT_CONTROL
+      5  HARD_DECLINE
+      2  ESCALATED_TO_HUMAN
+     13  LADDER_EXHAUSTED
+     12  HOLDOUT_CONTROL
+      1  REPLY_DISPUTE
+      2  REPLY_WILL_PAY
+------------------------------------------------------------------------
+  AI ACTIVITY
+    model calls       : 56
+    classified by     : 57 rule engine / 8 llm agent
+    tokens in / out   : 13012 / 4200
+    mean latency      : 12445 ms
+    copy rejected     : 8
+        8  AI_RECOVERY_RECOMMENDATION
+        3  CUSTOMER_REPLY_PARSED
+        8  FAILURE_DIAGNOSED_LLM
+        2  LLM_OUTPUT_REJECTED
+        2  PROMISE_TO_PAY_RECORDED
+       33  WHATSAPP_LINK_SENT
+
+    Responses are replayed from backend/data/llm_cache.json, recorded
+    against live Gemini. That is what lets this run reproduce exactly.
 ------------------------------------------------------------------------
   LEDGER
-    entries           : 388
+    entries           : 462
     chain             : VALID
-    head              : 1c61537bff157538c209bafea604ab5fbd3c3c82f78e5b0e7a15bcdba2a4c5c5
+    head              : d40aefe8d2bc79ff3c14e27c31f211375edc25edb26848c122baf70ea7462fa0
 ========================================================================
   Run this again - every number above, head hash included, repeats.
   Verify the chain     : python -m app.tools.verify_ledger
   Break it on purpose  : python -m app.tools.tamper_demo
+------------------------------------------------------------------------
+  RecoverOS is the original work of Rahul Hongekar (https://github.com/RahulH007), submitted to the Razorpay Buildathon, Track 03.
+  https://github.com/RahulH007/RazorPay_Buildathon
 ========================================================================

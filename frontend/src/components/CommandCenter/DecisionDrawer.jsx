@@ -43,6 +43,7 @@ import {
 import AuditTimeline from './AuditTimeline';
 import DecisionTrace from './DecisionTrace';
 import PolicyChecks from './PolicyChecks';
+import WhyThisCustomer from './WhyThisCustomer';
 import { FAILURE_CLASS_LABELS, formatCurrencyFull } from '../../utils/formatters';
 import {
   buildPolicyChecks,
@@ -255,6 +256,14 @@ export default function DecisionDrawer({
                 }
               >
                 <DecisionTrace record={record} decision={decision} />
+
+                {/* Who this is and what has worked on them before. Sits inside
+                    the trace because it is context for the decision above it,
+                    not a competing verdict — and it says on its own face that
+                    policy, not this, decides what runs. */}
+                <div className="mt-3">
+                  <WhyThisCustomer insight={decision?.customerInsight} />
+                </div>
               </Section>
 
               {/* 2 · WHAT AI FOUND -------------------------------------- */}

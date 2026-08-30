@@ -11,6 +11,7 @@ from datetime import datetime, timezone, timedelta
 
 from sqlalchemy.orm import Session
 
+from app import idempotency
 from app.models import PaymentFailureRecord, AuditTrailEntry, RazorpayPaymentLink
 from app.state_machine import transition_state, log_audit
 from app.config import SETTLEMENT_TIMEOUT_MINUTES
@@ -133,13 +134,25 @@ async def _settle_via_payment_link(
     # The link is settled either way; the record only transitions if it is
     # still open. A record already recovered by the direct path must not get a
     # second transition.
-    link.status = "paid"
-    link.razorpay_payment_id = new_payment_id
-    link.updated_at = datetime.now(timezone.utc)
+    # Settle the link atomically. The `status == "paid"` check above is a cheap
+    # early exit; this is the one that decides, because two deliveries can both
+    # pass that check before either writes. Losing here means another delivery
+    # is settling this link right now and this one must add nothing.
+    if not idempotency.claim_link(db, link, new_payment_id):
+        db.commit()
+        return {
+            "status": "already_recovered",
+            "payment_id": link.payment_id,
+            "razorpay_payment_link_id": link.razorpay_payment_link_id,
+            "razorpay_payment_id": link.razorpay_payment_id,
+        }
 
+    # The record only transitions if it is still open, and transition_state now
+    # says whether this caller was the one that moved it. A payment.captured
+    # racing this same rupee may already have done so.
     transitioned = False
     if record.recovery_state in ("INTERVENING", "DIAGNOSED"):
-        await transition_state(
+        transitioned = await transition_state(
             db, record,
             to_state="RECOVERED",
             actor="system",
@@ -150,7 +163,6 @@ async def _settle_via_payment_link(
                 f"Recovery channel: {record.recovery_channel}"
             ),
         )
-        transitioned = True
 
     db.commit()
 
@@ -244,14 +256,18 @@ async def handle_payment_captured(db: Session, payment_id: str, webhook_data: di
         return {"status": "already_recovered", "payment_id": payment_id}
 
     if record.recovery_state in ("INTERVENING", "DIAGNOSED"):
-        await transition_state(
+        # Exactly one of a duplicate delivery, a concurrent payment_link.paid,
+        # or this call transitions the record. The others report what actually
+        # happened rather than claiming the recovery as their own.
+        if not await transition_state(
             db, record,
             to_state="RECOVERED",
             actor="system",
             details=f"Payment captured via Razorpay webhook. "
                     f"Amount: ₹{record.amount / 100:,.2f}. "
                     f"Recovery channel: {record.recovery_channel}",
-        )
+        ):
+            return {"status": "already_recovered", "payment_id": payment_id}
 
         # Broadcast metric update
         try:
@@ -290,13 +306,17 @@ async def handle_invoice_paid(db: Session, invoice_id: str, webhook_data: dict =
         return {"status": "not_found", "invoice_id": invoice_id}
 
     if record.recovery_state in ("INTERVENING", "DIAGNOSED"):
-        await transition_state(
+        if not await transition_state(
             db, record,
             to_state="RECOVERED",
             actor="system",
             details=f"Invoice {invoice_id} paid. B2B receivable recovered.",
-        )
+        ):
+            return {"status": "already_recovered", "invoice_id": invoice_id}
         return {"status": "recovered", "invoice_id": invoice_id}
+
+    if record.recovery_state == "RECOVERED":
+        return {"status": "already_recovered", "invoice_id": invoice_id}
 
     return {"status": "invalid_state", "invoice_id": invoice_id}
 

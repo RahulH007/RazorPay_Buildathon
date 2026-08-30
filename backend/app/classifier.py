@@ -109,6 +109,20 @@ async def llm_classify(db: Session, record: PaymentFailureRecord):
         )
         return FailureClass.HARD_DECLINE, "system", f"Diagnosis unavailable: {type(e).__name__}"
 
+    # --- AI recommendation: recorded, never authorising -------------------
+    #
+    # Written before the confidence branch below, so a weak reading is
+    # preserved as evidence rather than discarded - the escalation that
+    # follows is more legible to a reviewer who can see what the model
+    # actually thought. The entry costs nothing, moves no state and is not an
+    # attempt; app/ai_advisor.py carries the four independent reasons it
+    # cannot become an action.
+    from app import ai_advisor
+
+    ai_advisor.record_recommendation(
+        db, record, ai_advisor.build(record, diagnosis), llm_metadata=metadata,
+    )
+
     if diagnosis.confidence < CONFIDENCE_THRESHOLD:
         log_audit(
             db, record,

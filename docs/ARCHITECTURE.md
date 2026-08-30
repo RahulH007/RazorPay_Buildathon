@@ -1,3 +1,8 @@
+> **Superseded.** This file is the early architecture note, kept for history.
+> The maintained technical architecture — covering the Safety Guard, ERV, the
+> AI advisory, customer personalization, idempotency, the recovery tick and
+> cohort economics — is **[documentation/ARCHITECTURE.md](../documentation/ARCHITECTURE.md)**.
+
 # RecoverOS Architecture
 
 ## Runtime Flow

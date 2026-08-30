@@ -12,7 +12,7 @@ Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 
 from fastapi import APIRouter, HTTPException
 
-from app import ledger
+from app import ai_advisor, customer_profile, ledger
 from app.consent import record_opt_out
 from app.database import SessionLocal
 from app.models import PaymentFailureRecord, AuditTrailEntry
@@ -21,6 +21,7 @@ from app.schemas import PaymentFailureResponse
 from app.voice_pipeline import handle_dtmf_response
 from app.llm_agent import generate_hinglish_script
 from app.inbound import handle_reply
+from app.recovery_tick import advance_open_recoveries
 
 router = APIRouter()
 
@@ -63,6 +64,11 @@ async def get_recovery_record(payment_id: str):
             "batch_id": record.batch_id,
             "created_at": record.created_at.isoformat() if record.created_at else None,
             "updated_at": record.updated_at.isoformat() if record.updated_at else None,
+            "ai_recommendation": ai_advisor.latest_for(db, payment_id),
+            # Why this customer, why this channel, why now. Computed on
+            # read so it reflects history as it stands now rather than as
+            # it stood when the advisory was written.
+            "customer_insight": customer_profile.insight_for(db, record),
             "audit_trail": [
                 {
                     "id": e.id,
@@ -83,6 +89,27 @@ async def get_recovery_record(payment_id: str):
                 for e in audit_entries
             ],
         }
+    finally:
+        db.close()
+
+
+@router.post("/recovery/tick")
+async def run_recovery_tick(dry_run: bool = True):
+    """
+    Advance every live recovery that is due for its next step.
+
+    The live path calls execute_recovery once per webhook and never again, so
+    without something driving this endpoint the escalation ladder stops at rung
+    one, the attempt cap is unreachable, and a quiet-hours deferral is a
+    permanent halt rather than a pause. Point a scheduler at it.
+
+    `dry_run` defaults to **true**, and deliberately: a misconfigured caller
+    that forgets the flag should report what it would do rather than message
+    customers. Pass `?dry_run=false` to act.
+    """
+    db = SessionLocal()
+    try:
+        return await advance_open_recoveries(db, dry_run=dry_run)
     finally:
         db.close()
 

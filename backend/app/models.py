@@ -168,6 +168,42 @@ class ConsentRecord(Base):
     recorded_at_us = Column(Integer, nullable=False)
 
 
+class RecoveryAttemptClaim(Base):
+    """
+    One reserved recovery attempt. The row IS the lock.
+
+    Two workers proposing the same attempt on the same record both try to
+    insert the same (payment_id, batch_key, attempt_number); the UNIQUE index
+    lets exactly one succeed, and the loser sends nothing. That is the only
+    cross-process, restart-surviving way to make "decide, then act" atomic
+    without a counter column that would have the same read-then-write problem
+    one level down - and it is the technique the ledger already relies on to
+    make a forked chain structurally impossible.
+
+    batch_key is a string rather than a nullable batch id on purpose. SQL
+    treats NULLs as distinct, so a nullable column would let every live
+    record - none of which carry a batch - be claimed twice, protecting the
+    demo and leaving the real path open. app/idempotency.py substitutes a
+    sentinel.
+
+    Rows are kept after the attempt lands: they are the evidence that this
+    attempt was reserved exactly once. They are deleted only when an attempt
+    failed before reaching the customer, so the rung can be retried.
+    """
+    __tablename__ = "recovery_attempt_claims"
+    __table_args__ = (
+        UniqueConstraint("payment_id", "batch_key", "attempt_number",
+                         name="uq_recovery_attempt_claim"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    payment_id = Column(String(50), ForeignKey("payment_failure_records.payment_id"),
+                        nullable=False, index=True)
+    batch_key = Column(String(50), nullable=False, index=True)
+    attempt_number = Column(Integer, nullable=False)
+    claimed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 class RazorpayPaymentLink(Base):
     """
     A Payment Link this system created at Razorpay, and what became of it.

@@ -35,6 +35,16 @@ TOP_LEVEL_KEYS = {
     "total_channel_cost_paise", "total_channel_cost", "net_roi_paise", "net_roi",
     "cost_per_recovery_paise", "cost_per_recovery", "recovered_count",
     "failed_count", "in_progress_count", "class_breakdown", "lift", "ledger",
+    # Which population every figure above describes, and which others exist.
+    # Added when the endpoint became cohort-scoped; both branches carry them,
+    # which is what the shape test below exists to keep true.
+    "cohort", "cohorts",
+    # Which action recovered how much, at what cost. Added when the economics
+    # became attributable per intervention; both branches carry them.
+    "interventions", "intervention_summary",
+    # What the model read across the cohort. Advisory only, and the payload
+    # says so itself.
+    "ai_insight",
     "records",
 }
 

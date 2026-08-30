@@ -95,6 +95,15 @@ export const REASON_CODES = {
     headline: 'Policy blocked recovery: negative expected value',
     blurb: 'The channel costs more than the margin it is expected to recover.',
   },
+  ECONOMICALLY_UNVIABLE: {
+    kind: 'stopped',
+    label: 'Economically unviable',
+    headline: 'Policy blocked recovery: expected net was not positive',
+    blurb:
+      'Valued against what this channel has actually recovered — from this '
+      + 'customer where there is enough history, otherwise across every record. '
+      + 'The attempt was worth no more than it costs.',
+  },
   CONSENT_WITHDRAWN: {
     kind: 'stopped',
     label: 'Consent withdrawn',
@@ -274,6 +283,9 @@ export const POLICY_GATES = [
   // actually blocked a send; folding them into one row cannot.
   { id: 'consent', label: 'Consent held', codes: ['CONSENT_WITHDRAWN'] },
   { id: 'quiet_hours', label: 'Inside calling hours', codes: ['QUIET_HOURS_DEFERRED'] },
+  // Last, because policy.py evaluates it last: every gate above is more
+  // fundamental, and an economic stop must never mask a compliance one.
+  { id: 'erv', label: 'Expected net is positive', codes: ['ECONOMICALLY_UNVIABLE'] },
 ];
 
 /**
@@ -444,6 +456,11 @@ export function deriveDecision(auditData) {
 
   return {
     paymentId: auditData.payment_id,
+    // Served by the backend on the same response the drawer already fetches.
+    // Passed through untouched: this file derives things from ledger entries,
+    // and re-deriving a reading the API computed would risk the two disagreeing
+    // on screen.
+    customerInsight: auditData.customer_insight || null,
     run,
     earlier,
     earlierRunCount: earlier.filter((e) => e.action === 'RECORD_INGESTED').length,

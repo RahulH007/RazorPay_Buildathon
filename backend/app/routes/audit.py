@@ -8,7 +8,7 @@ Razorpay Buildathon, Track 03. Reuse without attribution is plagiarism.
 
 from fastapi import APIRouter, HTTPException
 
-from app import ledger
+from app import ai_advisor, customer_profile, ledger
 from app.database import SessionLocal
 from app.models import AuditTrailEntry, PaymentFailureRecord
 
@@ -79,6 +79,14 @@ async def get_audit_trail(payment_id: str):
             "total_cost_paise": cumulative_paise,
             "total_cost_inr": cumulative_paise / 100.0,
             "verification": verification.to_dict(),
+            # What the model made of this failure, if it was ever asked. Read
+            # back off the chain rather than recomputed, and advisory by
+            # construction - see app/ai_advisor.py.
+            "ai_recommendation": ai_advisor.latest_for(db, payment_id),
+            # Served here as well as on /api/recovery because the decision
+            # drawer already fetches this endpoint; a second request for
+            # the same per-record read would be waste.
+            "customer_insight": customer_profile.insight_for(db, record),
             "audit_trail": trail,
         }
     finally:

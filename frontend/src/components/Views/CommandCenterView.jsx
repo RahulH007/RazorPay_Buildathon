@@ -15,11 +15,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import ActivityTicker from '../Dashboard/ActivityTicker';
+import AiRecoveryInsight from '../CommandCenter/AiRecoveryInsight';
 import AiActivityStrip from '../Dashboard/AiActivityStrip';
 import ModelInterpretations from '../Dashboard/ModelInterpretations';
 import CommandCenterHeader from '../CommandCenter/CommandCenterHeader';
 import DecisionDrawer from '../CommandCenter/DecisionDrawer';
 import HeroMetrics from '../CommandCenter/HeroMetrics';
+import InterventionEconomics from '../CommandCenter/InterventionEconomics';
 import RecoveryPipeline from '../CommandCenter/RecoveryPipeline';
 import RecoveryQueue from '../CommandCenter/RecoveryQueue';
 import TrustStrip from '../CommandCenter/TrustStrip';
@@ -171,6 +173,18 @@ export default function CommandCenterView({
         recordCount={records.length}
         recordsGmv={records.reduce((sum, r) => sum + (r.amount || 0), 0)}
       />
+
+      {/* What brought the money back, immediately under how much came back.
+          It answers the merchant's second question, and it belongs above the
+          pipeline because the pipeline is about individual records while this
+          is about the strategy those records were run through. */}
+      <InterventionEconomics metrics={metrics} />
+
+      {/* What the model made of the failures the rule engine could not map,
+          and — stated before the readings themselves — that it decided none
+          of them. Sits below the economics because it explains the hardest
+          cases rather than the headline. */}
+      <AiRecoveryInsight metrics={metrics} />
 
       <RecoveryPipeline
         records={records}

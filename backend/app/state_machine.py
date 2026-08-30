@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app import ledger
+from app import idempotency, ledger
 from app.models import PaymentFailureRecord, AuditTrailEntry
 from app.websocket_manager import manager
 
@@ -79,7 +79,22 @@ async def transition_state(
     """
     Transition a payment record to a new state.
     Appends a ledger entry and broadcasts a WebSocket event.
-    Returns True if transition was successful.
+
+    Returns True when THIS caller made the transition, and False when another
+    session got there first.
+
+    The state change is one conditional UPDATE keyed on the state the caller
+    believes it is leaving, so the check and the write cannot be separated by
+    another session. It used to be a read followed by an assignment, which is
+    correct in a single thread and races in every other case: Razorpay delivers
+    payment.captured and payment_link.paid for the same rupee, retries on any
+    non-2xx, and two settlement paths reading INTERVENING at the same moment
+    both wrote RECOVERED - two terminal transitions for one payment, on an
+    append-only chain whose whole purpose is to be believed.
+
+    A False return is not an error and must not be treated as one. It means the
+    work is already done by somebody else; the caller's job is to report that
+    honestly rather than claim the outcome as its own.
     """
     from_state = record.recovery_state
 
@@ -88,9 +103,11 @@ async def transition_state(
             f"Invalid transition: {from_state} → {to_state} for {record.payment_id}"
         )
 
-    # Update the record state
-    record.recovery_state = to_state
-    record.updated_at = datetime.now(timezone.utc)
+    if not idempotency.claim_state(db, record, [from_state], to_state):
+        # Somebody else moved this record while we held a copy of it. Nothing
+        # is written: no ledger entry, no broadcast, no second claim on the
+        # money.
+        return False
 
     # Determine the trigger/action name
     trigger = TRANSITION_TRIGGERS.get((from_state, to_state), f"{from_state}_TO_{to_state}")

@@ -259,10 +259,11 @@ def test_gate_is_closed_when_credentials_are_placeholders(monkeypatch):
     assert razorpay_client.is_configured(LIVE_SOURCE) is False
 
 
-def test_get_client_refuses_rather_than_returning_none(monkeypatch):
-    monkeypatch.setattr(razorpay_client, "DEMO_MODE", True)
-    # Bypass the autouse guard to exercise the real refusal path.
-    monkeypatch.undo()
+def test_get_client_refuses_rather_than_returning_none(monkeypatch, external_locks):
+    # Deliberately lift the autouse isolation to exercise the real refusal
+    # path. Safe because DEMO_MODE is forced on first, so get_client refuses
+    # before it can build a client - which is the behaviour under test.
+    external_locks.restore()
     monkeypatch.setattr(razorpay_client, "DEMO_MODE", True)
     with pytest.raises(razorpay_client.RazorpayNotConfigured):
         razorpay_client.get_client(LIVE_SOURCE)

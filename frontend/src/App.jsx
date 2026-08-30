@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 // Components
 import AttributionFooter from './components/UI/AttributionFooter';
 import PhoneFrame from './components/PhoneSimulator/PhoneFrame';
-import AskRayWidget from './components/UI/AskRayWidget';
 
 // Views
 import HomeView from './components/Views/HomeView';
@@ -330,10 +329,10 @@ function App() {
         )}
 
         {/* Dynamic View 2: Docs */}
-        {activeNav === 'docs' && <div className="rzp-container py-8"><DocsView /></div>}
+        {activeNav === 'docs' && <DocsView onNavigateTab={setActiveNav} />}
 
         {/* Dynamic View 3: About Rahul */}
-        {activeNav === 'about' && <div className="rzp-container py-8"><AboutRahulView /></div>}
+        {activeNav === 'about' && <div className="rzp-container py-8"><AboutRahulView onNavigateTab={setActiveNav} /></div>}
 
         {/* Dynamic View 4: Recovery Command Center */}
         {activeNav === 'overview' && (
@@ -386,8 +385,6 @@ function App() {
         </div>
       )}
 
-      {/* ================= FLOATING ASK RAY AI WIDGET ================= */}
-      <AskRayWidget onRunBatch={handleRunBatch} onNavigateTab={setActiveNav} />
     </div>
   );
 }

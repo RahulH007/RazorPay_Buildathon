@@ -17,6 +17,7 @@ from app.models import PaymentFailureRecord, RazorpayPaymentLink
 from app.schemas import FailureClass
 from app.state_machine import transition_state, log_audit
 from app.consent import is_suppressed
+from app.guardrails import count_attempts
 from app.llm_agent import generate_whatsapp_message
 from app.policy import ReasonCode, decide_next_action
 from app.config import (
@@ -24,7 +25,7 @@ from app.config import (
     RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET,
     PAYMENT_LINK_CALLBACK_URL as _CONFIGURED_CALLBACK_URL,
 )
-from app import razorpay_client
+from app import idempotency, razorpay_client, safety_guard
 
 
 # Razorpay validates that expire_by is at least 15 minutes in the future. The
@@ -469,9 +470,55 @@ async def execute_recovery(
             **decision.to_dict(),
         }
 
+    # --- Safety Guard: the final authorization point ------------------------
+    #
+    # Policy decides; the guard authorizes. Everything below this line can
+    # reach a customer, a bank or Razorpay, so a proposal the guard does not
+    # recognise as legitimate never gets there. The guard re-derives the
+    # channel and the amount from the same deterministic tables policy used,
+    # rather than trusting the numbers it is handed - which is what stops a
+    # model, or a future caller reaching this function some other way, from
+    # naming either one.
+    #
+    # It is deliberately redundant with event_adapter's unmapped-reason gate.
+    # That gate is one `if` on one code path; this is the single point every
+    # action must pass through.
+    verdict = safety_guard.authorize(db, record, decision, source=source)
+    if not verdict.allowed:
+        return safety_guard.block(db, record, decision, verdict)
+
     action_fn = CHANNEL_ACTION_MAP.get(decision.channel)
     if not action_fn:
         return {"action": "no_action", "reason": f"Unknown channel: {decision.channel}"}
+
+    # --- Exactly-once claim -------------------------------------------------
+    #
+    # Everything above this line is a read. Two workers - two recovery ticks,
+    # a tick racing a webhook, one endpoint called twice - both count zero
+    # attempts on the ledger, both are approved for the same rung, and both are
+    # authorised by the guard, because none of them has written anything yet.
+    # Without a claim they both send, and the customer gets two messages and
+    # Razorpay gets two Payment Links.
+    #
+    # The insert is the lock: exactly one caller can hold
+    # (payment, batch, attempt number). Placed after the guard so a refusal
+    # never reserves a rung it did not use, and before any transition so a
+    # suppressed duplicate leaves the record exactly as it found it.
+    claimed_attempt = decision.attempt_number
+    if not idempotency.claim_attempt(db, record, claimed_attempt):
+        return {
+            "action": "no_action",
+            "reason_code": idempotency.DUPLICATE_REASON_CODE,
+            "reason": (
+                f"Attempt {claimed_attempt} on {record.payment_id} is already "
+                f"claimed by another worker. Suppressed: no message, no link, "
+                f"no spend, no state change."
+            ),
+            "duplicate_suppressed": True,
+            "payment_id": record.payment_id,
+            "failure_class": record.failure_class,
+            "channel": decision.channel,
+        }
 
     if record.recovery_state == "DIAGNOSED":
         await transition_state(
@@ -483,10 +530,25 @@ async def execute_recovery(
 
     # Only the actions that can reach Razorpay accept a source; the rest keep
     # their existing two-argument signature.
-    if "source" in inspect.signature(action_fn).parameters:
-        result = await action_fn(db, record, source=source)
-    else:
-        result = await action_fn(db, record)
+    attempts_before = count_attempts(db, record)
+    try:
+        if "source" in inspect.signature(action_fn).parameters:
+            result = await action_fn(db, record, source=source)
+        else:
+            result = await action_fn(db, record)
+    except Exception:
+        # A claim must not become a tombstone. If nothing reached the customer,
+        # give the rung back so the next tick can try it again - a Razorpay
+        # timeout should cost a retry, not the rung.
+        #
+        # If a send WAS recorded before the failure, the claim is kept. The
+        # customer has been contacted, and releasing here would send them a
+        # second copy of the same message on the next pass, which is the
+        # expensive half of this decision.
+        if count_attempts(db, record) == attempts_before:
+            idempotency.release_attempt(db, record, claimed_attempt)
+        raise
+
     result["payment_id"] = record.payment_id
     result["failure_class"] = record.failure_class
     result["decision"] = decision.to_dict()

@@ -30,6 +30,7 @@ from app.config import (
     MERCHANT_MARGIN_PERCENT,
     RECOVERY_RATES,
 )
+from app import erv
 from app.consent import is_suppressed
 from app.guardrails import (
     cac_ceiling_paise,
@@ -53,6 +54,11 @@ class ReasonCode:
     NEGATIVE_EXPECTED_VALUE = "NEGATIVE_EXPECTED_VALUE"
     HOLDOUT_CONTROL = "HOLDOUT_CONTROL"
     PROMISE_TO_PAY_PENDING = "PROMISE_TO_PAY_PENDING"
+    # Expected Recovery Value: this specific attempt, on this specific
+    # record, is worth no more than it costs. Distinct from
+    # NEGATIVE_EXPECTED_VALUE, which asks the coarser question of whether
+    # the channel beats the class-average margin at all.
+    ECONOMICALLY_UNVIABLE = "ECONOMICALLY_UNVIABLE"
 
 
 # Which channel each step of the escalation uses, per failure class.
@@ -101,6 +107,11 @@ class PolicyDecision:
     attempt_number: int = 0
     cost_paise: int = 0
 
+    # The Expected Recovery Value working for the channel this decision names,
+    # when one was chosen. None when no channel got as far as being valued -
+    # a hard decline or an exhausted ladder has nothing to value.
+    erv: Optional[dict] = None
+
     def to_dict(self) -> dict:
         return {
             "should_act": self.should_act,
@@ -109,6 +120,7 @@ class PolicyDecision:
             "channel": self.channel,
             "attempt_number": self.attempt_number,
             "cost_paise": self.cost_paise,
+            "erv": self.erv,
         }
 
 
@@ -283,15 +295,42 @@ def decide_next_action(
                 cost_paise=cost,
             )
 
+    # 8. Expected Recovery Value: is *this* attempt, on *this* record, worth
+    #    more than it costs?
+    #
+    #    Evaluated last, and that ordering is the point. Every check above is
+    #    more fundamental - a compliance halt, a spend ceiling, an exhausted
+    #    ladder, a withdrawn consent - and the reason code is what an operator
+    #    acts on, so the most fundamental refusal has to be the one that
+    #    survives. An economic stop must never mask a compliance one.
+    #
+    #    Where check 6 asks whether the channel beats the class-average margin
+    #    at all, this asks what this customer has actually done with this
+    #    channel. The flat rate cannot see that four links to this contact have
+    #    gone unanswered; the observed rate can.
+    estimate = erv.evaluate(db, record, channel, cost)
+    if not estimate.viable:
+        return PolicyDecision(
+            should_act=False,
+            reason_code=ReasonCode.ECONOMICALLY_UNVIABLE,
+            reason=erv.trace(estimate),
+            channel=channel,
+            attempt_number=attempts,
+            cost_paise=cost,
+            erv=estimate.to_dict(),
+        )
+
     return PolicyDecision(
         should_act=True,
         reason_code=ReasonCode.PROCEED,
         reason=(
             f"Attempt {attempts + 1} of {len(ladder)} for {failure_class}: "
             f"{channel} at {cost}p, within the {cac_ceiling_paise(record)}p "
-            f"ceiling and worth an expected {expected}p."
+            f"ceiling and worth an expected {expected}p. "
+            f"{erv.trace(estimate)}"
         ),
         channel=channel,
         attempt_number=attempts,
         cost_paise=cost,
+        erv=estimate.to_dict(),
     )
