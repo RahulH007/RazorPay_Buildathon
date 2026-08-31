@@ -12,7 +12,7 @@
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](#)
 [![Author](https://img.shields.io/badge/built%20by-Rahul%20Hongekar-162F56?style=flat-square)](https://github.com/RahulH007)
 
-<img src="docs/screenshots/hero.jpg" alt="RecoverOS dashboard" width="100%" />
+<img src="docs/screenshots/hero.png" alt="RecoverOS dashboard" width="100%" />
 
 **[Verify the claims](#verify-every-claim-in-60-seconds)** · **[The flow](#the-end-to-end-flow)** · **[AI vs policy](#ai-advises-policy-decides)** · **[Safety Guard](#the-safety-guard)** · **[ERV](#expected-recovery-value)** · **[Architecture](documentation/ARCHITECTURE.md)** · **[What is not built](#not-built-yet)**
 
