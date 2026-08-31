@@ -14,7 +14,7 @@
 
 <img src="docs/screenshots/hero.png" alt="RecoverOS dashboard" width="100%" />
 
-**[Verify the claims](#verify-every-claim-in-60-seconds)** · **[The flow](#the-end-to-end-flow)** · **[AI vs policy](#ai-advises-policy-decides)** · **[Safety Guard](#the-safety-guard)** · **[ERV](#expected-recovery-value)** · **[Architecture](documentation/ARCHITECTURE.md)** · **[What is not built](#not-built-yet)**
+**[Verify the claims](#verify-every-claim-in-60-seconds)** · **[The flow](#the-end-to-end-flow)** · **[AI vs policy](#ai-advises-policy-decides)** · **[Safety Guard](#the-safety-guard)** · **[ERV](#expected-recovery-value)** · **[Architecture](#architecture)** · **[Trust boundaries](#trust-boundary-matrix)** · **[What is not built](#not-built-yet)**
 
 <sub>Original work of **Rahul Hongekar** · [github.com/RahulH007](https://github.com/RahulH007) · Razorpay Buildathon, Track 03 · see [NOTICE](NOTICE.md)</sub>
 
@@ -199,6 +199,117 @@ flowchart LR
 Each arrow narrows what the next stage may do. Diagnosis produces a failure class and nothing else. The advisory produces a recommendation that can be ignored. Policy turns a class into a channel, an attempt number and a cost, from tables written in code. ERV asks whether that specific attempt is worth its cost. The guard re-derives channel and cost from those same tables and refuses anything that does not match. The executor performs exactly what it was authorised to perform.
 
 Full detail — every module, every check, every failure mode — is in **[documentation/ARCHITECTURE.md](documentation/ARCHITECTURE.md)**.
+
+---
+
+## Architecture
+
+The system is drawn as trust zones rather than as a service diagram, because
+the interesting property is not what talks to what — it is **what each layer is
+permitted to decide**. Authority narrows left to right and never widens.
+
+```mermaid
+flowchart TB
+    RZP[/"Razorpay<br/>payment.failed · payment_link.paid · payment.captured"/]
+    UI["React Console<br/><i>reads the ledger, triggers endpoints</i>"]
+
+    subgraph Z1["ZONE 1 · Untrusted input — verified before a field is read"]
+        HMAC["HMAC-SHA256 signature<br/><i>fails closed without a real secret</i>"]
+        ADAPT["event_adapter<br/><i>normalize · idempotent ingest</i>"]
+    end
+
+    subgraph Z2["ZONE 2 · Advisory — zero execution authority"]
+        CLS["classifier<br/><i>RULE_MAP first, model second</i>"]
+        LLM["llm_agent<br/><i>Gemini: diagnosis · copy · replies</i>"]
+        ADV["ai_advisor"]
+        PROF["customer_profile<br/><i>per-contact history</i>"]
+    end
+
+    subgraph Z3["ZONE 3 · Deterministic authority — tables a person wrote"]
+        POL["policy<br/><i>ATTEMPT_LADDER · 11 reason codes</i>"]
+        CONS["consent<br/><i>opt-out registry · TRAI quiet hours</i>"]
+        GRD["guardrails<br/><i>attempt cap · CAC ceiling</i>"]
+        ERV["erv<br/><i>expected net ≤ 0 refuses</i>"]
+    end
+
+    subgraph Z4["ZONE 4 · Authorization — the single point every action passes"]
+        SG["safety_guard<br/><i>13 checks · re-derives channel and cost</i>"]
+    end
+
+    subgraph Z5["ZONE 5 · Execution — the only code that reaches outside"]
+        ACT["recovery_actions"]
+        RC["razorpay_client<br/><i>Payment Links</i>"]
+        VP["voice_pipeline"]
+    end
+
+    subgraph Z6["ZONE 6 · Evidence — append-only in the ORM and in SQLite"]
+        IDEM["idempotency<br/><i>claim_state · claim_link · claim_attempt</i>"]
+        LED[("ledger<br/>hash chain · UNIQUE prev_hash")]
+    end
+
+    RZP --> HMAC
+    HMAC --> ADAPT
+    ADAPT --> CLS
+    CLS -. "reason not in RULE_MAP" .-> LLM
+    LLM -- "a failure class, nothing else" --> CLS
+    CLS --> POL
+    PROF --> ADV
+    ADV -. "recommendation — recorded, never read downstream" .-> LED
+    POL --> CONS
+    POL --> GRD
+    POL --> ERV
+    ERV -- "PolicyDecision" --> SG
+    SG -- "ALLOWED" --> ACT
+    SG -. "refusal → SAFETY_GUARD_BLOCKED · spends nothing" .-> LED
+    ACT --> IDEM
+    ACT --> RC
+    ACT --> VP
+    ACT --> LED
+    IDEM --> LED
+    RC -- "creates a real Test Mode link" --> RZP
+    UI -- "triggers endpoints · proposes no channel, amount or state" --> ADAPT
+    LED --> UI
+
+    classDef untrusted fill:#FEF3F2,stroke:#D92D20,color:#7A271A
+    classDef advisory fill:#EFF6FF,stroke:#2B6DEF,color:#12305C
+    classDef deterministic fill:#ECFDF3,stroke:#12B76A,color:#054F31
+    classDef gate fill:#FEF0C7,stroke:#F79009,color:#7A2E0E
+    classDef exec fill:#F4F3FF,stroke:#7A5AF8,color:#2E1065
+    classDef evidence fill:#F2F4F7,stroke:#475467,color:#101828
+
+    class HMAC,ADAPT untrusted
+    class CLS,LLM,ADV,PROF advisory
+    class POL,CONS,GRD,ERV deterministic
+    class SG gate
+    class ACT,RC,VP exec
+    class IDEM,LED evidence
+```
+
+**Read the two dotted arrows out of Zone 2 and Zone 4.** They are the whole
+design. The advisory's output goes to the ledger and the console — it is
+*recorded*, and it is never an input to the decision. The guard's refusal is
+also an arrow: a block is written down with the check that fired, rather than
+being a silence.
+
+### Trust Boundary Matrix
+
+| Component | Role | Execution authority | Enforced by |
+|---|---|---|---|
+| **Razorpay payload** | External event | **None until verified.** HMAC-SHA256 over the exact bytes, checked before a field is read. Webhook `notes` are attacker-supplied: a match adds confidence, a mismatch disqualifies, absence proves nothing. | Fails closed outside demo mode — a missing or placeholder secret rejects every webhook |
+| **`llm_agent`** | Diagnoses failures the rules cannot map; writes WhatsApp copy and voice scripts; reads inbound replies | **None.** Returns one of five failure classes and text. Cannot name a channel, an amount, a state, or an API call. | Unparseable output or low confidence degrades to `HARD_DECLINE`, whose ladder is empty |
+| **`ai_advisor`** · **`customer_profile`** | Recommends, with per-contact history | **None.** The recommendation is written to the ledger and shown in the UI. No downstream module reads it. | AST test parses each module and asserts it imports no `recovery_actions`, `razorpay_client`, `voice_pipeline`, `settlement`, `httpx` or `requests` |
+| **`classifier`** | Error code → failure class | **Routing only.** `RULE_MAP` first; the model path exists only for codes the table does not hold. | An unmapped *live* reason is ingested and **held** — no action, no spend |
+| **`policy`** | Act or refuse · which channel · which attempt · what cost | **Absolute.** Channel is a lookup in `ATTEMPT_LADDER`, never generated. Eleven reason codes, cheapest first, first refusal wins. | Re-consulted before *every* attempt, so the cap and the ceiling bind against accumulated spend |
+| **`consent`** · **`guardrails`** | Suppression registry · TRAI quiet hours · attempt cap · CAC ceiling | **Veto only.** Can stop an action; can never start one. | Suppression is keyed on the normalized phone, so it crosses every payment from that contact |
+| **`erv`** | Is this specific attempt worth its cost | **Veto only.** Break-even is a refusal, not an approval. | Evaluated **last**, so a compliance stop is never reported as an economic one |
+| **`safety_guard`** | Final authorization | **Absolute veto.** Thirteen checks. Re-derives channel and cost from policy's own tables rather than trusting what it was handed. First check is `isinstance(decision, PolicyDecision)` — a model's raw dict is rejected before one field is read. | Deliberately does **not** import `recovery_actions`; a guard must not depend on the thing it guards |
+| **`idempotency`** | Exactly-once under duplicates and races | **Absolute.** Conditional `UPDATE … WHERE` on state and link; `UNIQUE(payment_id, batch_key, attempt_number)` on attempts. | The database decides who wins; `transition_state` returns whether *this* caller made the transition |
+| **`recovery_actions`** · **`razorpay_client`** · **`voice_pipeline`** | Physical dispatch — the only code that reaches a customer, a bank, or Razorpay | **Execution only.** Performs exactly what the guard authorised, and reads no recommendation. A record whose advisory says `hinglish_voice` at 99% confidence still gets `whatsapp_link` if that is the rung. | Live path gated on `source = razorpay_webhook` *and* `DEMO_MODE`, so the synthetic batch cannot reach the network even with real credentials loaded |
+| **`ledger`** | Evidence | **None, by construction.** Append-only. Nothing in the system can update or delete an entry. | SQLAlchemy events *and* SQLite `BEFORE UPDATE` / `BEFORE DELETE` triggers; `UNIQUE prev_hash` prevents forks |
+| **React console** | Operator console | **Trigger only.** Invokes endpoints. Cannot propose a channel, an amount, or a state transition. | Every drill it fires — opt-out, fraud halt — runs the same policy path and is ledgered with its own actor |
+
+The four independent mechanisms that keep Zone 2 powerless are described, with
+the test that breaks each one, in [AI advises, policy decides](#ai-advises-policy-decides).
 
 ---
 
